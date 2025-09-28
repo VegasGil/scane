@@ -1,171 +1,340 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Gestión de Palets (.dat)</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-    h1 { text-align: center; }
-    input, button, select { padding: 10px; margin: 10px 5px; font-size: 16px; }
-    #result, #listado { background: #fff; padding: 15px; border: 1px solid #ccc; margin-top: 10px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    #acciones { margin-top: 10px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Gestión de Palets (.dat)</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #f4f4f4;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        input,
+        button,
+        select {
+            padding: 10px;
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+
+        #result,
+        #listado {
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        #acciones {
+            margin-top: 10px;
+        }
+
+        #modalAviso {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #modalAviso .contenido {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        #modalAviso button {
+            margin: 10px;
+        }
+    </style>
 </head>
+
 <body>
-  <h1>Gestión de Palets (.dat)</h1>
+    <h1>Gestión de Palets (.dat)</h1>
 
-  <input type="file" id="fileInput" accept=".dat">
-  <button onclick="generarEstructura()">Generar estructura</button>
-  <br>
-  <input type="text" id="searchInput" placeholder="Buscar referencia">
-  <button onclick="buscar()">Buscar</button>
+    <input type="file" id="fileInput" accept=".dat">
+    <button onclick="generarEstructura()">Generar estructura</button>
+    <br>
+    <input type="text" id="searchInput" placeholder="Buscar referencia">
+    <button onclick="buscar()">Buscar</button>
 
-  <div id="result"></div>
+    <div id="result"></div>
 
-  <div id="acciones" style="display:none;">
-    <label>Acción:
-      <select id="accion">
-        <option value="prestamo">Préstamo</option>
-        <option value="devolucion">Devolución</option>
-      </select>
-    </label>
-    <label>Fecha:
-      <input type="date" id="fecha">
-    </label>
-    <button onclick="aplicarCambio()">Aplicar cambio</button>
-    <button onclick="guardarArchivo()">Guardar archivo</button>
-  </div>
+    <div id="acciones" style="display:none;">
+        <label>Acción:
+            <select id="accion">
+                <option value="prestamo">Préstamo</option>
+                <option value="devolucion">Devolución</option>
+            </select>
+        </label>
+        <label>Fecha:
+            <input type="date" id="fecha">
+        </label>
+        <button onclick="aplicarCambio()">Aplicar cambio</button>
+        <button onclick="guardarArchivo()">Guardar archivo</button>
+    </div>
 
-  <hr>
-  <h3>Filtros y Listados</h3>
-  <button onclick="listarTodo()">Listar todo</button>
-  <button onclick="filtrarEstado('PRESTAMO')">Ver préstamos</button>
-  <button onclick="filtrarEstado('DEVOLUCION')">Ver devoluciones</button>
-  <select id="pasilloSelect" onchange="filtrarPasillo()">
-    <option value="">Filtrar por pasillo</option>
-  </select>
+    <hr>
+    <h3>Filtros y Listados</h3>
+    <button onclick="listarTodo()">Listar todo</button>
+    <button onclick="filtrarEstado('PRESTAMO')">Ver préstamos</button>
+    <button onclick="filtrarEstado('DEVOLUCION')">Ver devoluciones</button>
+    <select id="pasilloSelect" onchange="filtrarPasillo()">
+        <option value="">Filtrar por pasillo</option>
+    </select>
+    <select id="paletSelect" onchange="filtrarPalet()">
+        <option value="">Filtrar por palet</option>
+    </select>
 
-  <div id="listado"></div>
+    <div id="listado"></div>
 
-  <script>
-    let referencias = [];
-    let estructura = [];
-    let archivoNombre = 'archivo.dat';
-    let lineaSeleccionada = -1;
+    <div id="modalAviso">
+        <div class="contenido">
+            <h3>⚠️ Cambios sin guardar</h3>
+            <p>Hay modificaciones pendientes. ¿Deseas guardar antes de continuar?</p>
+            <button onclick="guardarArchivo(); cerrarModal()">Guardar y continuar</button>
+            <button onclick="cerrarModal()">Continuar sin guardar</button>
+        </div>
+    </div>
 
-    document.getElementById('fileInput').addEventListener('change', function () {
-      const file = this.files[0];
-      archivoNombre = file.name;
-      const reader = new FileReader();
-      reader.onload = function () {
-        referencias = reader.result.split('\n').filter(r => r.trim() !== '');
-        alert("Archivo cargado con " + referencias.length + " referencias.");
-      };
-      reader.readAsText(file);
+    <script>
+        let referencias = [];
+        let estructura = [];
+        let archivoNombre = 'archivo.dat';
+        let lineaSeleccionada = -1;
+        let estructuraModificada = false;
+
+        document.getElementById('fileInput').addEventListener('change', function () {
+            const file = this.files[0];
+            archivoNombre = file.name;
+            const reader = new FileReader();
+            reader.onload = function () {
+                referencias = reader.result.split('\n').filter(r => r.trim() !== '');
+                alert("Archivo cargado con " + referencias.length + " referencias.");
+            };
+            reader.readAsText(file);
+        });
+
+     function generarEstructura() {
+  estructura = [];
+  let referenciasTemporales = [];
+  let ubicacionActual = '';
+
+  referencias.forEach(linea => {
+    const texto = linea.trim();
+
+    // Detecta cualquier línea tipo "n-PALET-m" como ubicación
+    if (/^\d+-PALET-\d+/.test(texto)) {
+      ubicacionActual = texto;
+
+      // Asocia todas las referencias acumuladas al palet actual
+      referenciasTemporales.forEach(ref => {
+        estructura.push(`${ubicacionActual} ${ref} | ESTADO: DISPONIBLE`);
+      });
+
+      referenciasTemporales = [];
+    } else {
+      referenciasTemporales.push(texto);
+    }
+  });
+
+  // Procesa referencias finales si el archivo termina sin nueva ubicación
+  if (ubicacionActual && referenciasTemporales.length > 0) {
+    referenciasTemporales.forEach(ref => {
+      estructura.push(`${ubicacionActual} ${ref} | ESTADO: DISPONIBLE`);
     });
+  }
 
-    function generarEstructura() {
-      estructura = referencias.map((ref, i) => {
-        return `45-PALET-${i + 1} ${ref} | ESTADO: DISPONIBLE`;
-      });
-      actualizarPasillos();
-      alert("Estructura generada.");
-    }
+  estructuraModificada = true;
+  actualizarPasillos();
+  alert("Estructura generada por referencia individual.");
+}
+        function calcularEstado(linea) {
+            const tienePrestamo = linea.includes('PRESTAMO');
+            const tieneDevolucion = linea.includes('DEVOLUCION');
+            return (tienePrestamo && !tieneDevolucion) ? 'PRESTADO' : 'DISPONIBLE';
+        }
 
-    function buscar() {
-      const query = document.getElementById('searchInput').value.trim().toLowerCase();
-      lineaSeleccionada = estructura.findIndex(line => line.toLowerCase().includes(query));
-      const resultDiv = document.getElementById('result');
+        function buscar() {
+            if (estructuraModificada) {
+                mostrarModal();
+                return;
+            }
 
-      if (lineaSeleccionada === -1) {
-        resultDiv.innerHTML = '<strong>No encontrado</strong>';
-        document.getElementById('acciones').style.display = 'none';
-      } else {
-        const linea = estructura[lineaSeleccionada];
-        const partes = linea.split(' ');
-        const ubicacion = partes[0];
-        const referencia = partes[1];
-        const estado = linea.includes('PRESTAMO') ? 'PRESTADO' : linea.includes('DEVOLUCION') ? 'DEVUELTO' : 'DISPONIBLE';
-        resultDiv.innerHTML = `<strong>Referencia encontrada:</strong><br>Ubicación: ${ubicacion}<br>Referencia: ${referencia}<br>Estado: ${estado}`;
-        document.getElementById('acciones').style.display = 'block';
-      }
-    }
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            lineaSeleccionada = estructura.findIndex(line => line.toLowerCase().includes(query));
+            const resultDiv = document.getElementById('result');
 
-    function aplicarCambio() {
-      if (lineaSeleccionada === -1) return;
-      const accion = document.getElementById('accion').value;
-      const fecha = document.getElementById('fecha').value;
-      let linea = estructura[lineaSeleccionada];
+            if (lineaSeleccionada === -1) {
+                resultDiv.innerHTML = '<strong>No encontrado</strong>';
+                document.getElementById('acciones').style.display = 'none';
+            } else {
+                const partes = estructura[lineaSeleccionada].split(' ');
+                const ubicacion = partes[0];
+                const referencia = partes[1];
+                const estado = calcularEstado(estructura[lineaSeleccionada]);
+                resultDiv.innerHTML = `<strong>Referencia encontrada:</strong><br>Ubicación: ${ubicacion}<br>Referencia: ${referencia}<br>Estado: ${estado}`;
+                document.getElementById('acciones').style.display = 'block';
+            }
+        }
+        function aplicarCambio() {
+            if (lineaSeleccionada === -1) return;
+            const accion = document.getElementById('accion').value;
+            const fecha = document.getElementById('fecha').value;
+            let linea = estructura[lineaSeleccionada];
 
-      if (accion === 'prestamo' && !linea.includes('PRESTAMO')) {
-        linea += ` | PRESTAMO ${fecha}`;
-      } else if (accion === 'devolucion' && !linea.includes('DEVOLUCION')) {
-        linea += ` | DEVOLUCION ${fecha}`;
-      }
+            const partes = linea.split(' ');
+            const ubicacion = partes[0];
+            const referencia = partes[1];
 
-      estructura[lineaSeleccionada] = linea;
-      buscar();
-    }
+            // Limpiar campos anteriores
+            let campos = linea.split('|')
+                .map(c => c.trim())
+                .filter(c => !c.startsWith('ESTADO:') && !c.startsWith('PRESTAMO') && !c.startsWith('DEVOLUCION') && c !== `${ubicacion} ${referencia}`);
 
-    function guardarArchivo() {
-      const contenido = estructura.join('\n');
-      const blob = new Blob([contenido], { type: 'text/plain' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = archivoNombre;
-      link.click();
-    }
+            // Agregar nueva acción
+            if (accion === 'prestamo') {
+                campos.push(`PRESTAMO ${fecha}`);
+            } else if (accion === 'devolucion') {
+                campos.push(`DEVOLUCION ${fecha}`);
+            }
 
-    function listarTodo() {
-      mostrarListado(estructura);
-    }
+            // Determinar estado
+            const tienePrestamo = accion === 'prestamo';
+            const tieneDevolucion = accion === 'devolucion';
+            const nuevoEstado = (tienePrestamo && !tieneDevolucion) ? 'ESTADO: PRESTADO' : 'ESTADO: DISPONIBLE';
 
-    function filtrarEstado(estado) {
-      const filtrado = estructura.filter(line => line.includes(estado));
-      mostrarListado(filtrado);
-    }
+            // Reconstruir línea
+            const nuevaLinea = `${ubicacion} ${referencia} | ${nuevoEstado} | ${campos.join(' | ')}`;
+            estructura[lineaSeleccionada] = nuevaLinea;
+            estructuraModificada = true;
+            buscar();
+        }
 
-    function actualizarPasillos() {
-      const select = document.getElementById('pasilloSelect');
-      select.innerHTML = '<option value="">Filtrar por pasillo</option>';
-      const pasillos = [...new Set(estructura.map(line => line.split('-')[0]))];
-      pasillos.forEach(p => {
-        const option = document.createElement('option');
-        option.value = p;
-        option.textContent = `Pasillo ${p}`;
-        select.appendChild(option);
-      });
-    }
+        function guardarArchivo() {
+            const contenido = estructura.join('\n');
+            const blob = new Blob([contenido], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = archivoNombre;
+            link.click();
+            estructuraModificada = false;
+        }
 
-    function filtrarPasillo() {
-      const pasillo = document.getElementById('pasilloSelect').value;
-      if (!pasillo) return;
-      const filtrado = estructura.filter(line => line.startsWith(pasillo + '-'));
-      mostrarListado(filtrado);
-    }
+        function mostrarModal() {
+            document.getElementById('modalAviso').style.display = 'flex';
+        }
 
-    function mostrarListado(lista) {
-      const div = document.getElementById('listado');
-      if (lista.length === 0) {
-        div.innerHTML = '<strong>No hay resultados</strong>';
-        return;
-      }
+        function cerrarModal() {
+            document.getElementById('modalAviso').style.display = 'none';
+            estructuraModificada = false;
+            buscar();
+        }
 
-      let html = '<table><thead><tr><th>Ubicación</th><th>Referencia</th><th>Estado</th><th>Préstamo</th><th>Devolución</th></tr></thead><tbody>';
-      lista.forEach(line => {
-        const partes = line.split(' ');
-        const ubicacion = partes[0];
-        const referencia = partes[1];
-        const estado = line.includes('PRESTAMO') ? 'PRESTADO' : line.includes('DEVOLUCION') ? 'DEVUELTO' : 'DISPONIBLE';
-        const fechaPrestamo = (line.match(/PRESTAMO (\d{4}-\d{2}-\d{2})/) || [])[1] || '';
-        const fechaDevolucion = (line.match(/DEVOLUCION (\d{4}-\d{2}-\d{2})/) || [])[1] || '';
-        html += `<tr><td>${ubicacion}</td><td>${referencia}</td><td>${estado}</td><td>${fechaPrestamo}</td><td>${fechaDevolucion}</td></tr>`;
-      });
-      html += '</tbody></table>';
-      div.innerHTML = html;
-    }
-  </script>
+        function listarTodo() {
+            mostrarListado(estructura);
+        }
+
+        function filtrarEstado(estado) {
+            const filtrado = estructura.filter(line => line.includes(estado));
+            mostrarListado(filtrado);
+        }
+
+        function actualizarPasillos() {
+            const pasilloSelect = document.getElementById('pasilloSelect');
+            const paletSelect = document.getElementById('paletSelect');
+
+            pasilloSelect.innerHTML = '<option value="">Filtrar por pasillo</option>';
+            paletSelect.innerHTML = '<option value="">Filtrar por palet</option>';
+
+            const ubicaciones = [...new Set(estructura.map(line => line.split(' ')[0]))];
+            const pasillos = [...new Set(ubicaciones.map(u => u.split('-')[0]))];
+
+            pasillos.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                option.textContent = `Pasillo ${p}`;
+                pasilloSelect.appendChild(option);
+            });
+
+            ubicaciones.forEach(palet => {
+                const option = document.createElement('option');
+                option.value = palet;
+                option.textContent = palet;
+                paletSelect.appendChild(option);
+            });
+        }
+        function filtrarPalet() {
+            const palet = document.getElementById('paletSelect').value;
+            if (!palet) return;
+            const filtrado = estructura.filter(line => line.startsWith(palet));
+            mostrarListado(filtrado);
+        }
+        function filtrarPasillo() {
+            const pasillo = document.getElementById('pasilloSelect').value;
+            if (!pasillo) return;
+            const filtrado = estructura.filter(line => line.startsWith(pasillo + '-'));
+            mostrarListado(filtrado);
+        }
+        function mostrarListado(lista) {
+            const div = document.getElementById('listado');
+            if (lista.length === 0) {
+                div.innerHTML = '<strong>No hay resultados</strong>';
+                return;
+            }
+
+            let html = '<table><thead><tr><th>Ubicación</th><th>Referencia</th><th>Estado</th><th>Préstamo</th><th>Devolución</th></tr></thead><tbody>';
+            lista.forEach((line) => {
+                const partes = line.split(' ');
+                const ubicacion = partes[0];
+                const referencia = partes.slice(1).join(' ').split('|')[0].trim();
+                const estado = calcularEstado(line);
+                const fechaPrestamo = (line.match(/PRESTAMO\s(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+                const fechaDevolucion = (line.match(/DEVOLUCION\s(\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+
+                html += `<tr onclick="seleccionarReferencia('${referencia}')">
+          <td>${ubicacion}</td>
+          <td>${referencia}</td>
+          <td>${estado}</td>
+          <td>${fechaPrestamo}</td>
+          <td>${fechaDevolucion}</td>
+        </tr>`;
+            });
+            html += '</tbody></table>';
+            div.innerHTML = html;
+        }
+
+        function seleccionarReferencia(ref) {
+            document.getElementById('searchInput').value = ref;
+            buscar();
+        }
+    </script>
 </body>
+
 </html>
