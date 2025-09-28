@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de Palets (.dat)</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    input, button, select { padding: 10px; margin: 10px 5px; font-size: 16px; }
+    #result, #listado { background: #fff; padding: 15px; border: 1px solid #ccc; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    #acciones { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Gestión de Palets (.dat)</h1>
+
+  <input type="file" id="fileInput" accept=".dat">
+  <button onclick="generarEstructura()">Generar estructura</button>
+  <br>
+  <input type="text" id="searchInput" placeholder="Buscar referencia">
+  <button onclick="buscar()">Buscar</button>
+
+  <div id="result"></div>
+
+  <div id="acciones" style="display:none;">
+    <label>Acción:
+      <select id="accion">
+        <option value="prestamo">Préstamo</option>
+        <option value="devolucion">Devolución</option>
+      </select>
+    </label>
+    <label>Fecha:
+      <input type="date" id="fecha">
+    </label>
+    <button onclick="aplicarCambio()">Aplicar cambio</button>
+    <button onclick="guardarArchivo()">Guardar archivo</button>
+  </div>
+
+  <hr>
+  <h3>Filtros y Listados</h3>
+  <button onclick="listarTodo()">Listar todo</button>
+  <button onclick="filtrarEstado('PRESTAMO')">Ver préstamos</button>
+  <button onclick="filtrarEstado('DEVOLUCION')">Ver devoluciones</button>
+  <select id="pasilloSelect" onchange="filtrarPasillo()">
+    <option value="">Filtrar por pasillo</option>
+  </select>
+
+  <div id="listado"></div>
+
+  <script>
+    let referencias = [];
+    let estructura = [];
+    let archivoNombre = 'archivo.dat';
+    let lineaSeleccionada = -1;
+
+    document.getElementById('fileInput').addEventListener('change', function () {
+      const file = this.files[0];
+      archivoNombre = file.name;
+      const reader = new FileReader();
+      reader.onload = function () {
+        referencias = reader.result.split('\n').filter(r => r.trim() !== '');
+        alert("Archivo cargado con " + referencias.length + " referencias.");
+      };
+      reader.readAsText(file);
+    });
+
+    function generarEstructura() {
+      estructura = referencias.map((ref, i) => {
+        return `45-PALET-${i + 1} ${ref} | ESTADO: DISPONIBLE`;
+      });
+      actualizarPasillos();
+      alert("Estructura generada.");
+    }
+
+    function buscar() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      lineaSeleccionada = estructura.findIndex(line => line.toLowerCase().includes(query));
+      const resultDiv = document.getElementById('result');
+
+      if (lineaSeleccionada === -1) {
+        resultDiv.innerHTML = '<strong>No encontrado</strong>';
+        document.getElementById('acciones').style.display = 'none';
+      } else {
+        const linea = estructura[lineaSeleccionada];
+        const partes = linea.split(' ');
+        const ubicacion = partes[0];
+        const referencia = partes[1];
+        const estado = linea.includes('PRESTAMO') ? 'PRESTADO' : linea.includes('DEVOLUCION') ? 'DEVUELTO' : 'DISPONIBLE';
+        resultDiv.innerHTML = `<strong>Referencia encontrada:</strong><br>Ubicación: ${ubicacion}<br>Referencia: ${referencia}<br>Estado: ${estado}`;
+        document.getElementById('acciones').style.display = 'block';
+      }
+    }
+
+    function aplicarCambio() {
+      if (lineaSeleccionada === -1) return;
+      const accion = document.getElementById('accion').value;
+      const fecha = document.getElementById('fecha').value;
+      let linea = estructura[lineaSeleccionada];
+
+      if (accion === 'prestamo' && !linea.includes('PRESTAMO')) {
+        linea += ` | PRESTAMO ${fecha}`;
+      } else if (accion === 'devolucion' && !linea.includes('DEVOLUCION')) {
+        linea += ` | DEVOLUCION ${fecha}`;
+      }
+
+      estructura[lineaSeleccionada] = linea;
+      buscar();
+    }
+
+    function guardarArchivo() {
+      const contenido = estructura.join('\n');
+      const blob = new Blob([contenido], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = archivoNombre;
+      link.click();
+    }
+
+    function listarTodo() {
+      mostrarListado(estructura);
+    }
+
+    function filtrarEstado(estado) {
+      const filtrado = estructura.filter(line => line.includes(estado));
+      mostrarListado(filtrado);
+    }
+
+    function actualizarPasillos() {
+      const select = document.getElementById('pasilloSelect');
+      select.innerHTML = '<option value="">Filtrar por pasillo</option>';
+      const pasillos = [...new Set(estructura.map(line => line.split('-')[0]))];
+      pasillos.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p;
+        option.textContent = `Pasillo ${p}`;
+        select.appendChild(option);
+      });
+    }
+
+    function filtrarPasillo() {
+      const pasillo = document.getElementById('pasilloSelect').value;
+      if (!pasillo) return;
+      const filtrado = estructura.filter(line => line.startsWith(pasillo + '-'));
+      mostrarListado(filtrado);
+    }
+
+    function mostrarListado(lista) {
+      const div = document.getElementById('listado');
+      if (lista.length === 0) {
+        div.innerHTML = '<strong>No hay resultados</strong>';
+        return;
+      }
+
+      let html = '<table><thead><tr><th>Ubicación</th><th>Referencia</th><th>Estado</th><th>Préstamo</th><th>Devolución</th></tr></thead><tbody>';
+      lista.forEach(line => {
+        const partes = line.split(' ');
+        const ubicacion = partes[0];
+        const referencia = partes[1];
+        const estado = line.includes('PRESTAMO') ? 'PRESTADO' : line.includes('DEVOLUCION') ? 'DEVUELTO' : 'DISPONIBLE';
+        const fechaPrestamo = (line.match(/PRESTAMO (\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+        const fechaDevolucion = (line.match(/DEVOLUCION (\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+        html += `<tr><td>${ubicacion}</td><td>${referencia}</td><td>${estado}</td><td>${fechaPrestamo}</td><td>${fechaDevolucion}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      div.innerHTML = html;
+    }
+  </script>
+</body>
+</html>

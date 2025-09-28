@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Carteles de Palets</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #fff;
+    }
+    h1 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+    .form-section {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input[type="number"] {
+      padding: 10px;
+      font-size: 20px;
+      width: 140px;
+      margin: 5px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 20px;
+      background-color: #0077cc;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #005fa3;
+    }
+    .output {
+      max-width: 100%;
+    }
+    .label {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 154px;
+      padding: 40px;
+      box-sizing: border-box;
+      page-break-after: always;
+    }
+    .sin-ubicar {
+      color: red;
+      font-size: 40px;
+      margin-top: 20px;
+    }
+    svg {
+      margin-top: 30px;
+      height: 120px;
+    }
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 18px;
+      color: #666;
+    }
+
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
+      h1, .form-section, button, footer {
+        display: none;
+      }
+      .label {
+        height: 100vh;
+        width: 100vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Carteles de Palets</h1>
+  <div class="form-section">
+    <input type="number" id="pasillo" placeholder="Pasillo">
+    <input type="number" id="inicio" placeholder="Palet inicio">
+    <input type="number" id="fin" placeholder="Palet fin">
+    <br>
+    <button onclick="generar()">Generar</button>
+    <button onclick="window.print()">Imprimir</button>
+  </div>
+  <div id="resultado" class="output"></div>
+
+  <footer>© Freddy Vegas 2025. Todos los derechos reservados.</footer>
+
+  <script>
+    function generar() {
+      const pasillo = parseInt(document.getElementById('pasillo').value);
+      const inicio = parseInt(document.getElementById('inicio').value);
+      const fin = parseInt(document.getElementById('fin').value);
+
+      if (isNaN(pasillo) || isNaN(inicio) || isNaN(fin) || inicio > fin) {
+        return alert("Verifica los datos ingresados");
+      }
+
+      const contenedor = document.getElementById('resultado');
+      contenedor.innerHTML = '';
+
+      for (let i = inicio; i <= fin; i++) {
+        const texto = `${pasillo}-PALET-${i}`;
+        const barcode = `${pasillo}-palet-${i}`;
+
+        const etiqueta = document.createElement('div');
+        etiqueta.className = 'label';
+
+        const titulo = document.createElement('div');
+        titulo.innerHTML = `<strong>${texto}</strong>`;
+
+        const estado = document.createElement('div');
+        estado.className = 'sin-ubicar';
+        estado.textContent = 'SIN UBICAR';
+
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        JsBarcode(svg, barcode, {
+          format: "CODE128",
+          displayValue: true,
+          fontSize: 24,
+          height: 100,
+          margin: 10
+        });
+
+        etiqueta.appendChild(titulo);
+        etiqueta.appendChild(estado);
+        etiqueta.appendChild(svg);
+        contenedor.appendChild(etiqueta);
+      }
+    }
+  </script>
+</body>
+</html>
