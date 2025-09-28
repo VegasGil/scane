@@ -130,16 +130,36 @@
         let lineaSeleccionada = -1;
         let estructuraModificada = false;
 
-        document.getElementById('fileInput').addEventListener('change', function () {
-            const file = this.files[0];
-            archivoNombre = file.name;
-            const reader = new FileReader();
-            reader.onload = function () {
-                referencias = reader.result.split('\n').filter(r => r.trim() !== '');
-                alert("Archivo cargado con " + referencias.length + " referencias.");
-            };
-            reader.readAsText(file);
-        });
+document.getElementById('fileInput').addEventListener('change', function () {
+  const file = this.files[0];
+  archivoNombre = file.name;
+  const reader = new FileReader();
+
+  reader.onload = function () {
+    const contenido = reader.result.split('\n').map(r => r.trim()).filter(r => r !== '');
+
+    const contieneEstructura = contenido.some(line => line.includes('| ESTADO:'));
+    const contienePalets = contenido.some(line => /^\d+-PALET-\d+/.test(line));
+
+    if (contieneEstructura) {
+      estructura = contenido;
+      estructuraModificada = false;
+      actualizarPasillos();
+      alert("✅ Archivo cargado con estructura modificada. Listo para consultar.");
+    } else if (contienePalets) {
+      referencias = contenido;
+      estructura = [];
+      estructuraModificada = false;
+      alert("📄 Archivo cargado en formato original. Genera estructura para modificar.");
+    } else {
+      referencias = [];
+      estructura = [];
+      alert("⚠️ El archivo no tiene formato válido. No se puede procesar.");
+    }
+  };
+
+  reader.readAsText(file);
+});
 
      function generarEstructura() {
   estructura = [];
