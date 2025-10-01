@@ -88,7 +88,7 @@
 <body>
   <h1>Carteles de Palets</h1>
   <div class="form-section">
-    <input type="number" id="pasillo" placeholder="Pasillo">
+    <input type="number" id="pasillo" placeholder="Depósito">
     <input type="number" id="inicio" placeholder="Palet inicio">
     <input type="number" id="fin" placeholder="Palet fin">
     <br>
@@ -114,7 +114,7 @@
 
       for (let i = inicio; i <= fin; i++) {
         const texto = `${pasillo}-PALET-${i}`;
-        const barcode = `${pasillo}-palet-${i}`;
+        const barcode = `${pasillo}-PALET-${i}`;
 
         const etiqueta = document.createElement('div');
         etiqueta.className = 'label';
