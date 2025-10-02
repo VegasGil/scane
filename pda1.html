@@ -4,129 +4,159 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 1em;
-    }
+<style>
+  body {
+    font-family: sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 1em;
+  }
 
-    h1 {
-      text-align: center;
-      color: #333;
-    }
+  h1 {
+    text-align: center;
+    color: #333;
+  }
 
+  #controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1em;
+    margin-bottom: 1em;
+  }
+
+  button {
+    font-size: 1.2em;
+    padding: 1em;
+    border: none;
+    border-radius: 8px;
+    background: #0078d4;
+    color: white;
+    cursor: pointer;
+    min-width: 150px;
+    margin-bottom: 0.5em;
+    box-sizing: border-box;
+  }
+
+  button:hover {
+    background: #005fa3;
+  }
+
+  #status {
+    text-align: center;
+    margin-bottom: 1em;
+    font-weight: bold;
+    color: #0078d4;
+  }
+
+  #output {
+    white-space: pre-wrap;
+    background: white;
+    padding: 1em;
+    border-radius: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  #routes {
+    margin-top: 1em;
+    background: #fff;
+    padding: 1em;
+    border-radius: 8px;
+  }
+
+  .route {
+    padding: 0.5em;
+    margin: 0.5em 0;
+    border-left: 5px solid #0078d4;
+    background: #eef;
+    cursor: pointer;
+  }
+
+  .found {
+    background: #c8f7c5 !important;
+    border-left-color: #28a745 !important;
+  }
+
+  .route.not-found {
+    background-color: #ffe5e5;
+    border-left: 4px solid red;
+    padding: 8px;
+    margin: 6px 0;
+  }
+
+  #scanner {
+    margin-top: 2em;
+    text-align: center;
+  }
+
+  #scanInput {
+    font-size: 1.2em;
+    padding: 0.5em;
+    width: 300px;
+    text-align: center;
+  }
+#cameraScanner {
+  position: relative;
+  z-index: 2;
+}
+
+#scanResult {
+  margin-top: 1em;
+  font-weight: bold;
+  position: relative;
+  z-index: 3;
+  background: #fff;
+  padding: 0.5em;
+  border-radius: 6px;
+}
+
+
+ #camara {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 4 / 3;
+  margin: 1em auto;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  position: relative;
+  min-height: 300px; /* ✅ Añadido para evitar que se colapsen las letras */
+}
+
+  /* 📱 Estilos responsivos para móviles */
+  @media (max-width: 600px) {
     #controls {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1em;
-      margin-bottom: 1em;
+      flex-direction: column;
+      align-items: center;
     }
 
-    button {
-      font-size: 1.2em;
-      padding: 1em;
-      border: none;
-      border-radius: 8px;
-      background: #0078d4;
-      color: white;
-      cursor: pointer;
-      min-width: 150px;
-      margin-bottom: 0.5em;
-        box-sizing: border-box;
-    }
-
-    button:hover {
-      background: #005fa3;
-    }
-
-    #status {
-      text-align: center;
-      margin-bottom: 1em;
-      font-weight: bold;
-      color: #0078d4;
-    }
-
-    #output {
-      white-space: pre-wrap;
-      background: white;
-      padding: 1em;
-      border-radius: 8px;
-      max-height: 50vh;
-      overflow-y: auto;
-    }
-
-    #routes {
-      margin-top: 1em;
-      background: #fff;
-      padding: 1em;
-      border-radius: 8px;
-    }
-
-    .route {
-      padding: 0.5em;
-      margin: 0.5em 0;
-      border-left: 5px solid #0078d4;
-      background: #eef;
-      cursor: pointer;
-    }
-
-    .found {
-      background: #c8f7c5 !important;
-      border-left-color: #28a745 !important;
-    }
-
-    #scanner {
-      margin-top: 2em;
-      text-align: center;
-    }
-
+    button,
     #scanInput {
-      font-size: 1.2em;
-      padding: 0.5em;
-      width: 300px;
-      text-align: center;
+      width: 90%;
+      font-size: 1em;
     }
 
-    #scanResult {
-      margin-top: 1em;
-      font-weight: bold;
+    #output,
+    #routes {
+      max-height: 40vh;
+      font-size: 0.95em;
     }
-    @media (max-width: 600px) {
-  #controls {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  button, #scanInput {
-    width: 90%;
-    font-size: 1em;
-  }
-
-  #output, #routes {
-    max-height: 40vh;
-    font-size: 0.95em;
-  }
-}
 @media (max-width: 600px) {
-  #controls {
-    flex-direction: column;
-    align-items: center;
+  #camara {
+    max-width: 100%;
+    aspect-ratio: 3 / 2;
+    min-height: 200px;
   }
 
-  button, #scanInput {
-    width: 90%;
-    font-size: 1em;
-  }
-
-  #output, #routes {
-    max-height: 40vh;
-    font-size: 0.95em;
+  #camara video {
+    object-fit: contain;
   }
 }
-  </style>
+  }
+
+
+</style>
 </head>
 
 <body>
@@ -137,19 +167,18 @@
     <button onclick="descargarDAT()">📥 Descargar cajas localizadas (.dat)</button>
   </div>
   <div id="status">Esperando archivo PDF...</div>
-  <div id="output"></div>
-  <div id="routes"></div>
-
-  <div id="scanner">
-    <h2>📡 Escaneo de contenedor</h2>
-    <input type="text" id="scanInput" inputmode="numeric" placeholder="Escanea aquí" autofocus />
-    <div id="scanResult"></div>
-  </div>
   <div id="cameraScanner">
   <h2>📷 Escaneo con cámara</h2>
   <button onclick="iniciarCamara()">🎦 Activar cámara</button>
-  <div id="camara" style="width:100%; max-width:400px; margin:auto;"></div>
+  <div id="camara"></div>
 </div>
+<div id="scanner">
+  <h2>📡 Escaneo de contenedor</h2>
+  <input type="text" id="scanInput" inputmode="numeric" placeholder="Escanea aquí" autofocus />
+  <div id="scanResult"></div>
+</div>
+  <div id="output"></div>
+  <div id="routes"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -302,10 +331,12 @@
     }
   });
 
- function descargarDAT() {
+function descargarDAT() {
   const divs = document.querySelectorAll('.route.found');
-  if (divs.length === 0) {
-    alert("No hay cajas localizadas para guardar.");
+  const noEncontradas = document.querySelectorAll('.route.not-found');
+
+  if (divs.length === 0 && noEncontradas.length === 0) {
+    alert("No hay cajas localizadas ni no encontradas para guardar.");
     return;
   }
 
@@ -313,12 +344,25 @@
   const yyyy = fecha.getFullYear();
   const mm = String(fecha.getMonth() + 1).padStart(2, '0');
   const dd = String(fecha.getDate()).padStart(2, '0');
-  const fechaTexto = `${dd}/${mm}/${yyyy}`; // Formato DD/MM/YYYY
+  const fechaTexto = `${dd}/${mm}/${yyyy}`;
 
-  const contenido = Array.from(divs).map(div => {
-    const texto = div.innerText.trim();
-    return `${texto}\n✅ Enviada a Odena ${fechaTexto}`;
-  }).join('\n\n');
+  let contenido = '';
+
+  if (divs.length > 0) {
+    contenido += '✅ Cajas localizadas:\n\n';
+    contenido += Array.from(divs).map(div => {
+      const texto = div.innerText.trim();
+      return `${texto}\n✅ Enviada a Odena ${fechaTexto}`;
+    }).join('\n\n');
+  }
+
+  if (noEncontradas.length > 0) {
+    contenido += '\n\n❌ Cajas no encontradas:\n\n';
+    contenido += Array.from(noEncontradas).map(div => {
+      const texto = div.innerText.trim();
+      return `${texto}\n❌ Pendiente de revisión ${fechaTexto}`;
+    }).join('\n\n');
+  }
 
   const nombreArchivo = `rutas_localizadas_${yyyy}-${mm}-${dd}.dat`;
 
@@ -330,14 +374,6 @@
   link.click();
   document.body.removeChild(link);
 }
-function localizarCaja(codigo, div) {
-  if (!div.classList.contains('found')) {
-    div.classList.add('found');
-    div.innerHTML += `<br>✅ Caja localizada`;
-    div.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  document.getElementById('scanResult').textContent = `✅ Contenedor ${codigo} localizado`;
-}
 function iniciarCamara() {
   Quagga.init({
     inputStream: {
@@ -345,11 +381,11 @@ function iniciarCamara() {
       type: "LiveStream",
       target: document.querySelector('#camara'),
       constraints: {
-        facingMode: "environment" // Usa la cámara trasera
+        facingMode: "environment"
       }
     },
     decoder: {
-      readers: ["code_128_reader", "ean_reader", "ean_8_reader", "upc_reader"]
+      readers: ["code_39_reader"]
     }
   }, function (err) {
     if (err) {
@@ -360,12 +396,111 @@ function iniciarCamara() {
     Quagga.start();
   });
 
-  Quagga.onDetected(function (data) {
-    const codigo = data.codeResult.code;
-    document.getElementById('scanInput').value = codigo;
-    document.getElementById('scanInput').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-    Quagga.stop(); // Detiene el escaneo tras detectar
-  });
+
+}
+function marcarNoEncontrado(codigo) {
+  const container = document.getElementById('routes');
+  const div = document.createElement('div');
+  div.className = 'route not-found';
+  div.innerHTML = `
+    <strong>Contenedor:</strong> ${codigo}<br>
+    ❌ No localizado en el listado
+  `;
+  container.appendChild(div);
+  document.getElementById('scanResult').textContent = `📦 Contenedor ${codigo} marcado como no encontrado`;
+}
+Quagga.onDetected(function (data) {
+  let codigo = data.codeResult.code;
+  const tipo = data.codeResult.format;
+
+  // Eliminar letras al inicio
+  codigo = codigo.replace(/^[A-Za-z]+/, '');
+
+  // Validar que sea numérico
+  if (/^\d+$/.test(codigo)) {
+    const divs = document.querySelectorAll('.route');
+    let encontrado = false;
+
+    divs.forEach(div => {
+      const contenedor = div.getAttribute('data-contenedor');
+      if (contenedor === codigo) {
+        div.classList.add('found');
+        if (!div.innerHTML.includes('✅')) {
+          div.innerHTML += '<br>✅ Caja localizada por escaneo';
+        }
+        div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('scanResult').textContent = `✅ Contenedor ${codigo} localizado`;
+        encontrado = true;
+      }
+    });
+
+    if (!encontrado) {
+      document.getElementById('scanResult').innerHTML = `
+        ❌ Contenedor ${codigo} no encontrado<br>
+        <button onclick="marcarNoEncontrado('${codigo}')">📦 Marcar como no encontrada</button>
+      `;
+    }
+
+    Quagga.stop();
+  } else {
+    console.warn(`❌ Código ignorado: ${codigo} (${tipo})`);
+  }
+});
+
+Quagga.onDetected(function (data) {
+  let codigo = data.codeResult.code;
+  const tipo = data.codeResult.format;
+
+  // Eliminar letras al inicio
+  codigo = codigo.replace(/^[A-Za-z]+/, '');
+
+  // Validar que sea numérico
+  if (/^\d+$/.test(codigo)) {
+    const divs = document.querySelectorAll('.route');
+    let encontrado = false;
+
+    divs.forEach(div => {
+      const contenedor = div.getAttribute('data-contenedor');
+      if (contenedor === codigo) {
+        div.classList.add('found');
+        if (!div.innerHTML.includes('✅')) {
+          div.innerHTML += '<br>✅ Caja localizada por escaneo';
+        }
+        div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('scanResult').textContent = `✅ Contenedor ${codigo} localizado`;
+        encontrado = true;
+      }
+    });
+
+    if (!encontrado) {
+      document.getElementById('scanResult').innerHTML = `
+        ❌ Contenedor ${codigo} no encontrado<br>
+        <button onclick="marcarNoEncontrado('${codigo}')">📦 Marcar como no encontrada</button>
+      `;
+    }
+
+    Quagga.stop();
+  } else {
+    console.warn(`❌ Código ignorado: ${codigo} (${tipo})`);
+  }
+});
+
+function marcarNoEncontrado(codigo) {
+  const container = document.getElementById('routes');
+  const yaExiste = Array.from(container.querySelectorAll('.route.not-found')).some(div =>
+    div.textContent.includes(codigo)
+  );
+  if (yaExiste) return;
+
+  const div = document.createElement('div');
+  div.className = 'route not-found';
+  div.setAttribute('data-contenedor', codigo);
+  div.innerHTML = `
+    <strong>Contenedor:</strong> ${codigo}<br>
+    ❌ No localizado en el listado
+  `;
+  container.appendChild(div);
+  document.getElementById('scanResult').textContent = `📦 Contenedor ${codigo} marcado como no encontrado`;
 }
 </script>
 </body>

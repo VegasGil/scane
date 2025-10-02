@@ -307,6 +307,18 @@
   link.click();
   document.body.removeChild(link);
 }
+Quagga.onDetected(function (data) {
+  const codigo = data.codeResult.code;
+
+  // Validar que sea un EAN-13 (13 dígitos numéricos)
+  if (/^\d{13}$/.test(codigo)) {
+    document.getElementById('scanInput').value = codigo;
+    document.getElementById('scanInput').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    Quagga.stop(); // Detiene el escaneo tras detectar correctamente
+  } else {
+    console.warn("Código inválido detectado:", codigo);
+  }
+});
 </script>
 </body>
 
