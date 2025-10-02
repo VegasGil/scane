@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,10 +12,12 @@
       margin: 0;
       padding: 1em;
     }
+
     h1 {
       text-align: center;
       color: #333;
     }
+
     #controls {
       display: flex;
       flex-wrap: wrap;
@@ -22,6 +25,7 @@
       gap: 1em;
       margin-bottom: 1em;
     }
+
     button {
       font-size: 1.2em;
       padding: 1em;
@@ -32,15 +36,18 @@
       cursor: pointer;
       min-width: 150px;
     }
+
     button:hover {
       background: #005fa3;
     }
+
     #status {
       text-align: center;
       margin-bottom: 1em;
       font-weight: bold;
       color: #0078d4;
     }
+
     #output {
       white-space: pre-wrap;
       background: white;
@@ -49,12 +56,14 @@
       max-height: 50vh;
       overflow-y: auto;
     }
+
     #routes {
       margin-top: 1em;
       background: #fff;
       padding: 1em;
       border-radius: 8px;
     }
+
     .route {
       padding: 0.5em;
       margin: 0.5em 0;
@@ -62,32 +71,37 @@
       background: #eef;
       cursor: pointer;
     }
+
     .found {
       background: #c8f7c5 !important;
       border-left-color: #28a745 !important;
     }
+
     #scanner {
       margin-top: 2em;
       text-align: center;
     }
+
     #scanInput {
       font-size: 1.2em;
       padding: 0.5em;
       width: 300px;
       text-align: center;
     }
+
     #scanResult {
       margin-top: 1em;
       font-weight: bold;
     }
   </style>
 </head>
+
 <body>
   <h1>📄 Extractor PDF táctil</h1>
   <div id="controls">
     <input type="file" id="fileInput" multiple accept="application/pdf" />
     <button onclick="extractText()">📝 Extraer texto</button>
-    <button onclick="descargarODT()">💾 Descargar .odt</button>
+    <button onclick="descargarDAT()">📥 Descargar cajas localizadas (.dat)</button>
   </div>
   <div id="status">Esperando archivo PDF...</div>
   <div id="output"></div>
@@ -98,164 +112,178 @@
     <input type="text" id="scanInput" placeholder="Escanea aquí" autofocus />
     <div id="scanResult"></div>
   </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  let pdfDocs = [];
+  let extractedData = [];
+  let rutas = [];
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script>
-    let pdfDocs = [];
-    let extractedData = [];
-    let rutas = [];
+  document.getElementById('fileInput').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-    document.getElementById('fileInput').addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files);
-      if (files.length === 0) return;
+    pdfDocs = [];
+    document.getElementById('status').textContent = `📂 Cargando ${files.length} PDF(s)...`;
 
-      pdfDocs = [];
-      document.getElementById('status').textContent = `📂 Cargando ${files.length} PDF(s)...`;
-
-      for (const file of files) {
-        const reader = new FileReader();
-        reader.onload = async function () {
-          const typedarray = new Uint8Array(this.result);
-          try {
-            const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
-            pdfDocs.push({ name: file.name, doc });
-            document.getElementById('status').textContent = `✅ ${pdfDocs.length}/${files.length} PDF(s) listos`;
-          } catch (err) {
-            console.error(`❌ Error al cargar ${file.name}:`, err);
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    });
-
-    async function extractText() {
-      if (pdfDocs.length === 0) return alert('Carga uno o más PDFs primero');
-      extractedData = [];
-      rutas = [];
-      let totalChars = 0;
-      let pagesWithoutText = 0;
-
-      for (const { name, doc } of pdfDocs) {
-        for (let i = 1; i <= doc.numPages; i++) {
-          const page = await doc.getPage(i);
-          const content = await page.getTextContent();
-          const strings = content.items.map(item => item.str).join(' ');
-          totalChars += strings.length;
-          if (strings.trim().length === 0) pagesWithoutText++;
-          extractedData.push(`📄 ${name} [Página ${i}]:\n` + strings);
+    for (const file of files) {
+      const reader = new FileReader();
+      reader.onload = async function () {
+        const typedarray = new Uint8Array(this.result);
+        try {
+          const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
+          pdfDocs.push({ name: file.name, doc });
+          document.getElementById('status').textContent = `✅ ${pdfDocs.length}/${files.length} PDF(s) listos`;
+        } catch (err) {
+          console.error(`❌ Error al cargar ${file.name}:`, err);
         }
-      }
-
-      const output = extractedData.join('\n\n');
-      document.getElementById('output').textContent = output;
-
-      if (pagesWithoutText > 0) {
-        document.getElementById('status').textContent = `⚠️ Algunos PDFs parecen escaneados. Aplica OCR si es necesario.`;
-      } else {
-        document.getElementById('status').textContent = `✅ Texto extraído (${totalChars} caracteres)`;
-        analizarRutas(output);
-      }
+      };
+      reader.readAsArrayBuffer(file);
     }
-function localizarCaja(codigo, div) {
-  if (!div.classList.contains('found')) {
-    div.classList.add('found');
-    div.innerHTML += '<br>✅ Caja localizada';
-    div.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  document.getElementById('scanResult').textContent = `✅ Contenedor ${codigo} localizado`;
-}
-    function analizarRutas(texto) {
-      const regex = /Arxiu:\s*(.+?)\s*Tipus:\s*(\S+)\s*Dipòsit:\s*(\d+)?\s*Pis:\s*(\d+)?\s*Carrer:\s*(\d+)?\s*Columna:\s*(\d+)?\s*Nivell:\s*(\d+)?\s*Serie:\s*(\d+)?\s*Contenidor:\s*(\d+)/gi;
-      rutas = [];
-      let match;
-      while ((match = regex.exec(texto)) !== null) {
-        if (match[3] && match[4] && match[5] && match[6] && match[7] && match[9]) {
-          rutas.push({
-            arxiu: match[1],
-            tipus: match[2],
-            deposito: match[3],
-            piso: match[4],
-            carrer: match[5],
-            columna: match[6],
-            nivell: match[7],
-            contenedor: match[9]
-          });
-        }
-      }
-
-      rutas.sort((a, b) =>
-        a.deposito - b.deposito ||
-        a.carrer - b.carrer ||
-        a.columna - b.columna ||
-        a.nivell - b.nivell
-      );
-
-      mostrarRutas(rutas);
-    }
-
-    function mostrarRutas(rutas) {
-  const container = document.getElementById('routes');
-  container.innerHTML = '<h2>📦 Rutas logísticas</h2>';
-
-  rutas.forEach((ruta, index) => {
-    const div = document.createElement('div');
-    div.className = 'route';
-    div.setAttribute('data-contenedor', ruta.contenedor);
-    div.innerHTML = `
-      <strong>Contenedor:</strong> ${ruta.contenedor}<br>
-      <strong>Arxiu:</strong> ${ruta.arxiu}<br>
-      <strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}<br>
-      <strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}
-    `;
-    div.onclick = () => localizarCaja(ruta.contenedor, div);
-    container.appendChild(div);
   });
-}
 
-    document.getElementById('scanInput').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter') {
-    const codigo = this.value.trim();
-    const resultado = document.getElementById('scanResult');
-    const divs = document.querySelectorAll('.route');
-    let encontrado = false;
+  async function extractText() {
+    if (pdfDocs.length === 0) return alert('Carga uno o más PDFs primero');
+    extractedData = [];
+    rutas = [];
+    let totalChars = 0;
+    let pagesWithoutText = 0;
 
-    divs.forEach(div => {
-      const contenedor = div.getAttribute('data-contenedor');
-      if (contenedor === codigo) {
-        div.classList.add('found');
-        if (!div.innerHTML.includes('✅')) {
-          div.innerHTML += '<br>✅ Caja localizada por escaneo';
-        }
-        resultado.textContent = `✅ Contenedor ${codigo} localizado`;
-        div.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        encontrado = true;
+    for (const { name, doc } of pdfDocs) {
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map(item => item.str).join(' ');
+        totalChars += strings.length;
+        if (strings.trim().length === 0) pagesWithoutText++;
+        extractedData.push(`📄 ${name} [Página ${i}]:\n` + strings);
       }
-    });
-
-    if (!encontrado) {
-      resultado.textContent = `❌ Contenedor ${codigo} no encontrado`;
     }
 
-   this.value = '';
+    const output = extractedData.join('\n\n');
+    document.getElementById('output').textContent = output;
+
+    if (pagesWithoutText > 0) {
+      document.getElementById('status').textContent = `⚠️ Algunos PDFs parecen escaneados. Aplica OCR si es necesario.`;
+    } else {
+      document.getElementById('status').textContent = `✅ Texto extraído (${totalChars} caracteres)`;
+      analizarRutas(output);
+    }
   }
-});function descargarODT() {
-  if (extractedData.length === 0) {
-    alert("No hay datos extraídos para guardar.");
+
+  function localizarCaja(codigo, div) {
+    if (!div.classList.contains('found')) {
+      div.classList.add('found');
+      div.innerHTML += '<br>✅ Caja localizada';
+      div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    document.getElementById('scanResult').textContent = `✅ Contenedor ${codigo} localizado`;
+  }
+
+  function analizarRutas(texto) {
+    const regex = /Arxiu:\s*(.+?)\s*Tipus:\s*(\S+)\s*Dipòsit:\s*(\d+)?\s*Pis:\s*(\d+)?\s*Carrer:\s*(\d+)?\s*Columna:\s*(\d+)?\s*Nivell:\s*(\d+)?\s*Serie:\s*(\d+)?\s*Contenidor:\s*(\d+)/gi;
+    rutas = [];
+    let match;
+    const depositosPermitidos = [45, 46, 47, 48, 49];
+
+    while ((match = regex.exec(texto)) !== null) {
+      const deposito = parseInt(match[3], 10);
+
+      if (
+        !isNaN(deposito) &&
+        depositosPermitidos.includes(deposito) &&
+        match[4] && match[5] && match[6] && match[7] && match[9]
+      ) {
+        rutas.push({
+          arxiu: match[1],
+          tipus: match[2],
+          deposito: match[3],
+          piso: match[4],
+          carrer: match[5],
+          columna: match[6],
+          nivell: match[7],
+          contenedor: match[9]
+        });
+      }
+    }
+
+    rutas.sort((a, b) =>
+      a.deposito - b.deposito ||
+      a.carrer - b.carrer ||
+      a.columna - b.columna ||
+      a.nivell - b.nivell
+    );
+
+    mostrarRutas(rutas);
+  }
+
+  function mostrarRutas(rutas) {
+    const container = document.getElementById('routes');
+    container.innerHTML = '<h2>📦 Rutas logísticas</h2>';
+
+    rutas.forEach((ruta, index) => {
+      const div = document.createElement('div');
+      div.className = 'route';
+      div.setAttribute('data-contenedor', ruta.contenedor);
+      div.innerHTML = `
+        <strong>Contenedor:</strong> ${ruta.contenedor}<br>
+        <strong>Arxiu:</strong> ${ruta.arxiu}<br>
+        <strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}<br>
+        <strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}
+      `;
+      div.onclick = () => localizarCaja(ruta.contenedor, div);
+      container.appendChild(div);
+    });
+  }
+
+  document.getElementById('scanInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      const codigo = this.value.trim();
+      const resultado = document.getElementById('scanResult');
+      const divs = document.querySelectorAll('.route');
+      let encontrado = false;
+
+      divs.forEach(div => {
+        const contenedor = div.getAttribute('data-contenedor');
+        if (contenedor === codigo) {
+          div.classList.add('found');
+          if (!div.innerHTML.includes('✅')) {
+            div.innerHTML += '<br>✅ Caja localizada por escaneo';
+          }
+          resultado.textContent = `✅ Contenedor ${codigo} localizado`;
+          div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          encontrado = true;
+        }
+      });
+
+      if (!encontrado) {
+        resultado.textContent = `❌ Contenedor ${codigo} no encontrado`;
+      }
+
+      this.value = '';
+    }
+  });
+
+ function descargarDAT() {
+  const divs = document.querySelectorAll('.route.found');
+  if (divs.length === 0) {
+    alert("No hay cajas localizadas para guardar.");
     return;
   }
 
-  const contenido = extractedData.join('\n\n');
-
-  // Obtener fecha actual en formato YYYY-MM-DD
   const fecha = new Date();
   const yyyy = fecha.getFullYear();
   const mm = String(fecha.getMonth() + 1).padStart(2, '0');
   const dd = String(fecha.getDate()).padStart(2, '0');
-  const fechaTexto = `${yyyy}-${mm}-${dd}`;
+  const fechaTexto = `${dd}/${mm}/${yyyy}`; // Formato DD/MM/YYYY
 
-  const nombreArchivo = `contenedores_${fechaTexto}.odt`;
+  const contenido = Array.from(divs).map(div => {
+    const texto = div.innerText.trim();
+    return `${texto}\n✅ Enviada a Odena ${fechaTexto}`;
+  }).join('\n\n');
 
-  const blob = new Blob([contenido], { type: 'application/vnd.oasis.opendocument.text' });
+  const nombreArchivo = `rutas_localizadas_${yyyy}-${mm}-${dd}.dat`;
+
+  const blob = new Blob([contenido], { type: 'text/plain' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = nombreArchivo;
@@ -265,4 +293,5 @@ function localizarCaja(codigo, div) {
 }
 </script>
 </body>
+
 </html>
