@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>📦 Revisión de Rutas</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f6f8;
+      padding: 2em;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #controls {
+      text-align: center;
+      margin-bottom: 1em;
+    }
+
+    input[type="file"], button {
+      font-size: 2em;
+      padding: 0.5em 1em;
+      margin: 0.5em;
+    }
+
+    #status {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 1em;
+    }
+
+    #modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+
+    #modalContent {
+      background: white;
+      padding: 2em;
+      border-radius: 8px;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    #modalContent button {
+      margin: 0.5em;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 1em 0;
+    }
+
+    .checkbox-group label {
+      margin: 0.5em;
+    }
+    .confirmada {
+  padding: 1em;
+  margin: 0.5em auto;
+  border-radius: 8px;
+  max-width: 500px;
+  font-weight: bold;
+  text-align: left;
+}
+
+.confirmada.encontrada {
+  background-color: #d4f8d4;
+  border-left: 6px solid #2e8b57;
+  color: #2e8b57;
+}
+
+.confirmada.no-encontrada {
+  background-color: #fddddd;
+  border-left: 6px solid #b22222;
+  color: #b22222;
+}
+    @media (max-width: 600px) {
+  #modalContent {
+    width: 90%;
+    font-size: 1em;
+  }
+
+  button {
+    font-size: 1em;
+    padding: 1em;
+  }
+
+  .checkbox-group {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .checkbox-group label {
+    font-size: 1.1em;
+  }
+}
+  </style>
+</head>
+<body>
+  <h1>📦 Revisión de Rutas</h1>
+
+  <div id="controls">
+    <input type="file" id="fileInput" accept=".dat" />
+    <button onclick="descargarFinal()">📥 Descargar archivo final</button>
+    <div id="confirmadas" style="margin-top:2em;"></div>
+   
+  </div>
+
+  <div id="status">Esperando archivo .dat...</div>
+
+  <div id="modal">
+    <div id="modalContent"></div>
+  </div>
+
+  <script>
+    let rutas = [];
+    let rutasFiltradas = [];
+    let rutasConfirmadas = [];
+    let depositosSeleccionados = [];
+    let actualIndex = 0;
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const text = await file.text();
+      rutas = parsearRutas(text);
+      const depositosValidos = ['45','46','47','48','49'];
+      const depositosEncontrados = [...new Set(rutas.map(r => r.deposito).filter(d => depositosValidos.includes(d)))].sort((a,b) => b - a);
+      mostrarModalSeleccion(depositosEncontrados);
+    });
+
+    function parsearRutas(texto) {
+      const bloques = texto.split(/\n{2,}/);
+      const rutas = [];
+
+      bloques.forEach(b => {
+        const cont = b.match(/Contenedor:\s*(\d+)/)?.[1] || '';
+        const arxiu = b.match(/Arxiu:\s*(.+)/)?.[1] || '';
+        const deposito = b.match(/Depósito:\s*(\d+)/)?.[1] || '';
+        const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
+        const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
+        const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
+        const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
+        const fecha = b.match(/\d{2}\/\d{2}\/\d{4}/)?.[0] || '';
+
+        if (cont && deposito) {
+          rutas.push({ contenedor: cont, arxiu, deposito, piso, carrer, columna, nivell, fecha });
+        }
+      });
+
+      return rutas;
+    }
+
+   function mostrarModalSeleccion(depositos) {
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+  depositosSeleccionados = [];
+
+  content.innerHTML = `<h2>Selecciona depósitos a revisar</h2><div style="display:flex;flex-wrap:wrap;justify-content:center;">`;
+
+  depositos.forEach(d => {
+    content.innerHTML += `
+      <button style="margin:0.5em;padding:1em 2em;font-size:1.2em;" onclick="toggleDeposito('${d}', this)">Depósito ${d}</button>
+    `;
+  });
+
+  content.innerHTML += `</div><button style="margin-top:1em;padding:1em;width:100%;" onclick="confirmarSeleccion()">Comenzar revisión</button>`;
+  modal.style.display = 'flex';
+}
+
+function toggleDeposito(valor, boton) {
+  const index = depositosSeleccionados.indexOf(valor);
+  if (index === -1) {
+    depositosSeleccionados.push(valor);
+    boton.style.background = '#0078d4';
+    boton.style.color = 'white';
+  } else {
+    depositosSeleccionados.splice(index, 1);
+    boton.style.background = '';
+    boton.style.color = '';
+  }
+}
+
+  function mostrarSiguienteCaja() {
+  if (actualIndex >= rutasFiltradas.length) {
+    document.getElementById('status').textContent = `✅ Revisión completa: ${rutasConfirmadas.length} cajas procesadas`;
+    descargarFinal(); // descarga automática
+    mostrarModalFinal(); // muestra opciones
+    return;
+  }
+
+  const ruta = rutasFiltradas[actualIndex];
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `
+    <h3 style="font-size:1.2em;">Contenedor: ${ruta.contenedor}</h3>
+    <p><strong>Arxiu:</strong> ${ruta.arxiu}</p>
+    <p><strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}</p>
+    <p><strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}</p>
+    <p><strong>Fecha:</strong> ${ruta.fecha}</p>
+    <button style="width:100%;padding:1em;margin-top:1em;" onclick="confirmarCaja(true)">✅ Caja encontrada</button>
+    <button style="width:100%;padding:1em;margin-top:0.5em;" onclick="confirmarCaja(false)">❌ Caja no encontrada</button>
+  `;
+  modal.style.display = 'flex';
+}
+
+function confirmarCaja(encontrada) {
+  const ruta = rutasFiltradas[actualIndex];
+  ruta.estado = encontrada ? `✅ Enviada a Odena ${ruta.fecha}` : `❌ No localizada ${ruta.fecha}`;
+  rutasConfirmadas.push(ruta);
+
+  // Mostrar debajo del modal
+  const div = document.createElement('div');
+  div.className = 'confirmada ' + (encontrada ? 'encontrada' : 'no-encontrada');
+  div.innerHTML = `
+    <strong>Contenedor:</strong> ${ruta.contenedor}<br>
+    <strong>Arxiu:</strong> ${ruta.arxiu}<br>
+    <strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}<br>
+    <strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}<br>
+    <strong>Estado:</strong> ${ruta.estado}
+  `;
+  document.getElementById('confirmadas').appendChild(div);
+
+  actualIndex++;
+  document.getElementById('modal').style.display = 'none';
+  setTimeout(mostrarSiguienteCaja, 300);
+}
+function descargarFinal() {
+  if (rutasConfirmadas.length === 0) {
+    alert("No hay rutas confirmadas aún.");
+    return null;
+  }
+
+  const contenido = rutasConfirmadas.map(r => {
+    return `Contenedor: ${r.contenedor}\nArxiu: ${r.arxiu}\nDepósito: ${r.deposito} | Pis: ${r.piso}\nCarrer: ${r.carrer} | Columna: ${r.columna} | Nivell: ${r.nivell}\n${r.estado}`;
+  }).join('\n\n');
+
+  const fecha = new Date();
+  const yyyy = fecha.getFullYear();
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dd = String(fecha.getDate()).padStart(2, '0');
+  const nombreArchivo = `rutas_confirmadas_${yyyy}-${mm}-${dd}.dat`;
+
+  const blob = new Blob([contenido], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+
+  // Botón de descarga
+  const descargarBtn = document.createElement('button');
+  descargarBtn.textContent = '📥 Descargar archivo .dat';
+  descargarBtn.style = 'width:100%;padding:1em;margin-top:1em;';
+  descargarBtn.onclick = () => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nombreArchivo;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Botón Gmail
+  const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=vegasf@outlook.com&su=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
+  const gmailBtn = document.createElement('button');
+  gmailBtn.textContent = '📧 Enviar por Gmail';
+  gmailBtn.style = 'width:100%;padding:1em;margin-top:0.5em;';
+  gmailBtn.onclick = () => window.open(gmailLink, '_blank');
+
+  // Botón Outlook / genérico
+  const mailtoLink = `mailto:vegasf@outlook.com?subject=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
+  const outlookBtn = document.createElement('button');
+  outlookBtn.textContent = '📨 Enviar por Outlook u otro';
+  outlookBtn.style = 'width:100%;padding:1em;margin-top:0.5em;';
+  outlookBtn.onclick = () => window.location.href = mailtoLink;
+
+  return [descargarBtn, gmailBtn, outlookBtn];
+}
+function mostrarModalFinal() {
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+  content.innerHTML = `<h2>✅ Revisión completada</h2><p>El archivo ha sido generado correctamente.</p>`;
+
+  const botones = descargarFinal();
+  if (botones) {
+    botones.forEach(btn => content.appendChild(btn));
+  }
+
+  const recargarBtn = document.createElement('button');
+  recargarBtn.textContent = '🔄 Cargar nuevo archivo';
+  recargarBtn.style = 'width:100%;padding:1em;margin-top:1em;';
+  recargarBtn.onclick = abrirTrasRecarga;
+  content.appendChild(recargarBtn);
+
+  const salirBtn = document.createElement('button');
+  salirBtn.textContent = '🚪 Salir';
+  salirBtn.style = 'width:100%;padding:1em;margin-top:0.5em;';
+  salirBtn.onclick = () => window.location.href = 'index.html';
+  content.appendChild(salirBtn);
+
+  modal.style.display = 'flex';
+}
+function abrirTrasRecarga() {
+  localStorage.setItem('abrirInput', 'true');
+  document.getElementById('modal').style.display = 'none'; // Oculta el modal antes de recargar
+  location.reload();
+}
+function reiniciar() {
+  // Limpiar todas las variables
+  rutas = [];
+  rutasFiltradas = [];
+  rutasConfirmadas = [];
+  depositosSeleccionados = [];
+  actualIndex = 0;
+
+  // Limpiar estado visual
+  document.getElementById('fileInput').value = '';
+  document.getElementById('status').textContent = '📂 Esperando nuevo archivo .dat...';
+  document.getElementById('modal').style.display = 'none';
+
+  // Opcional: volver a mostrar el input si lo habías ocultado
+}
+    function confirmarSeleccion() {
+      if (depositosSeleccionados.length === 0) {
+        alert('⚠️ Selecciona al menos un depósito para continuar.');
+        return;
+      }
+      rutasFiltradas = rutas.filter(r => depositosSeleccionados.includes(r.deposito));
+      if (rutasFiltradas.length === 0) {
+        alert('⚠️ No hay rutas para los depósitos seleccionados. Selecciona otros depósitos.');
+        return;
+      }
+      actualIndex = 0;
+      document.getElementById('modal').style.display = 'none';
+      document.getElementById('status').textContent = `✅ ${rutasFiltradas.length} cajas para revisar. Comenzando...`;
+      setTimeout(mostrarSiguienteCaja, 500);
+    }
+   window.addEventListener('load', () => {
+  if (localStorage.getItem('abrirInput') === 'true') {
+    localStorage.removeItem('abrirInput');
+
+    // Limpia visualmente
+    document.getElementById('modal').style.display = 'none';
+    document.getElementById('modalContent').innerHTML = '';
+    document.getElementById('confirmadas').innerHTML = '';
+    document.getElementById('status').textContent = '📂 Esperando nuevo archivo .dat...';
+
+    // Abre el input
+    setTimeout(() => {
+      document.getElementById('fileInput').click();
+    }, 300);
+  }
+});
+  </script>
+</body>
+</html>
