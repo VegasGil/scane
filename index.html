@@ -2,49 +2,128 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Menú Principal DAT</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 2em;
-      text-align: center;
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #f4f4f4, #eaeaea);
       color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+
+    header {
+      padding: 1.5em 1em 0.5em;
+      background: #d32f2f;
+      width: 100%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     h1 {
-      font-size: 2em;
-      margin-bottom: 1em;
+      font-size: 2rem;
+      margin: 0.5em 0;
+      color: white;
+    }
+
+    /* Animación del camión */
+    .camion {
+      font-size: 2.5rem;
+      display: inline-block;
+      animation: moverCamion 6s linear infinite;
+      position: relative;
+    }
+
+    @keyframes moverCamion {
+      0% { transform: translateX(-100%); }
+      50% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 600px;
+      padding: 2em 1em;
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
     }
 
     .boton {
-      display: block;
-      margin: 1em auto;
-      padding: 1em 2em;
-      font-size: 1.2em;
-      background: #f4f4f4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5em;
+      padding: 1em;
+      font-size: 1.1em;
+      font-weight: 500;
+      background: #fff;
       color: #222;
       border: 2px solid #ccc;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
       text-decoration: none;
-      width: 80%;
-      max-width: 400px;
-      transition: background 0.3s ease, transform 0.2s ease;
+      transition: all 0.3s ease;
     }
 
     .boton:hover {
-      background: #e0e0e0;
-      transform: scale(1.02);
+      background: #f0f0f0;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+    }
+
+    .boton:active {
+      transform: scale(0.98);
+      background: #e6e6e6;
+    }
+
+    footer {
+      padding: 1em;
+      font-size: 0.85em;
+      color: #666;
+    }
+
+    /* Responsividad */
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.6rem;
+      }
+      .camion {
+        font-size: 2rem;
+      }
+      .boton {
+        font-size: 1em;
+        padding: 0.9em;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>📦 Menú de Herramientas DAT</h1>
-  <a href="dat.html" class="boton">🔗 Gestión de Palets (.dat)</a>
-  <a href="cambio.html" class="boton">🧩 Convertir XLSX/CSV a DAT</a>
-  <a href="palet.html" class="boton">📒​ Carteles de Palets</a>
-  <a href="rutas.html" class="boton">💡​ Generar las Consulta</a>
-  <a href="consulta.html" class="boton">🚚​ Rutas de Consulta</a>
+  <header>
+    <div class="camion">🚚</div>
+    <h1>📦 Menú de Herramientas ARTES</h1>
+  </header>
+
+  <main>
+    <a href="dat.html" class="boton">🔗 Gestión de Palets (.dat)</a>
+    <a href="cambio.html" class="boton">🧩 Convertir XLSX/CSV a DAT</a>
+    <a href="palet.html" class="boton">📒​ Carteles de Palets</a>
+    <a href="rutas.html" class="boton">💡​ 1_Generar Consulta</a>
+    <a href="filtrar.html" class="boton">🔍​ 2_Filtrar Consulta</a>
+    <a href="consulta.html" class="boton">🚚​ 3_Rutas de Consulta</a>
+  </main>
+
+  <footer>
+    © 2025 DAT Tools | Optimizado para móviles 📱
+  </footer>
 </body>
 </html>

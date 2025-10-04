@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>📦 Comparador de Rutas DAT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --rojo: #d32f2f;
+      --gris: #6e6c6c;
+      --gris-claro: #f4f6f8;
+      --blanco: #fff;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, var(--gris-claro), #f7f7f7);
+      color: var(--gris);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      background: var(--rojo);
+      padding: 0.8em 1.2em;
+      color: var(--blanco);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    header .brand a {
+      text-decoration: none;
+      color: var(--blanco);
+      font-size: 1.2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--rojo);
+      margin: 1em 0;
+      font-size: 1.5rem;
+    }
+
+    h2 {
+      text-align: center;
+      margin: 1em 0 0.5em;
+      font-size: 1.2rem;
+      color: var(--gris);
+    }
+
+    #controls {
+      text-align: center;
+      margin-bottom: 1em;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5em;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .btn-file {
+      background: var(--gris);
+      color: var(--blanco);
+      padding: 0.7em 1em;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+      flex: 1 1 45%;
+      max-width: 220px;
+      transition: 0.3s;
+      text-align: center;
+    }
+
+    .btn-file:hover {
+      background: #635e5e;
+    }
+
+    .action-btn {
+      font-size: 1em;
+      padding: 0.7em 1em;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex: 1 1 45%;
+      max-width: 220px;
+      background: var(--rojo);
+      color: var(--blanco);
+      font-weight: bold;
+    }
+
+    .action-btn:hover {
+      background: #b71c1c;
+    }
+
+    #resultado {
+      margin: 1em auto;
+      white-space: pre-wrap;
+      background: var(--blanco);
+      padding: 1em;
+      border: 1px solid #ccc;
+      max-height: 400px;
+      overflow-y: auto;
+      width: 90%;
+      border-radius: 6px;
+    }
+
+    .modal-btn {
+      display: block;
+      width: 100%;
+      padding: 0.8em;
+      margin-top: 0.8em;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 1em;
+    }
+
+    .btn-outlook {
+      background: #0078d4;
+      color: var(--blanco);
+    }
+
+    .btn-outlook:hover {
+      background: #005fa3;
+    }
+
+    @media (max-width: 600px) {
+      #controls {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn-file,
+      .action-btn {
+        flex: 1 1 100%;
+        max-width: none;
+        width: 70%;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+      }
+
+      header .brand a {
+        font-size: 1rem;
+      }
+    }
+  
+  .modal-btn {
+    margin: 10px 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-download {
+    background-color: #4CAF50;
+    color: white;
+  }
+
+  .btn-download:hover {
+    background-color: #45a049;
+  }
+
+  .btn-outlook {
+    background-color: #0078D4;
+    color: white;
+  }
+
+  .btn-outlook:hover {
+    background-color: #005a9e;
+  }
+
+  .btn-copy {
+    background-color: #f0ad4e;
+    color: white;
+  }
+
+  .btn-copy:hover {
+    background-color: #ec971f;
+  }
+
+  pre {
+    background-color: #f9f9f9;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="brand">
+      <a href="index.html">ARADOC ARTES</a>
+    </div>
+  </header>
+
+  <h1>📦 Comparador de Rutas DAT</h1>
+
+  <h2>Paso 1: Cargar archivos</h2>
+  <div id="controls">
+    <label class="btn-file" for="fileHistorico">📁 Histórico .dat</label>
+    <input type="file" id="fileHistorico" accept=".dat" />
+
+    <label class="btn-file" for="fileActual">📁 Pdf_de_rutas .dat</label>
+    <input type="file" id="fileActual" accept=".dat" />
+
+    <button class="action-btn" onclick="comparar()">🔍 Comparar y filtrar</button>
+  </div>
+
+  <div id="resultado"></div>
+
+  <script>
+  let historico = [];
+  let actual = [];
+
+  function parsearBloques(texto) {
+    return texto.split(/\n{2,}/).map(b => b.trim()).filter(b => b.startsWith('Contenedor:'));
+  }
+
+  function extraerContenedor(bloque) {
+    const match = bloque.match(/Contenedor:\s*(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  function extraerContenedorNoLocalizados(bloques) {
+    return new Set(
+      bloques
+        .filter(b => b.includes('❌ No localizada'))
+        .map(b => extraerContenedor(b))
+    );
+  }
+
+  document.getElementById('fileHistorico').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const texto = await file.text();
+      historico = parsearBloques(texto);
+    }
+  });
+
+  document.getElementById('fileActual').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const texto = await file.text();
+      actual = parsearBloques(texto);
+    }
+  });
+
+ function comparar() {
+  if (historico.length === 0 || actual.length === 0) {
+    alert('⚠️ Carga ambos archivos antes de comparar.');
+    return;
+  }
+
+  const noLocalizadosHistorico = extraerContenedorNoLocalizados(historico);
+
+  const nuevos = actual.filter(b => {
+    const contenedor = extraerContenedor(b);
+    return !noLocalizadosHistorico.has(contenedor);
+  });
+
+  const yaBuscados = actual.filter(b => {
+    const contenedor = extraerContenedor(b);
+    return noLocalizadosHistorico.has(contenedor);
+  });
+
+  const resultadoDiv = document.getElementById('resultado');
+  resultadoDiv.innerHTML = '';
+
+  // Mostrar resumen
+  const resumen = document.createElement('div');
+  resumen.textContent = `✅ Ruta nueva con ${nuevos.length} contenedores. 📩 ${yaBuscados.length} ya fueron buscados y no localizados.`;
+  resumen.style.fontWeight = 'bold';
+  resumen.style.marginBottom = '1em';
+  resultadoDiv.appendChild(resumen);
+
+  // Mostrar ruta nueva
+  const contenidoFinal = nuevos.join('\n\n');
+  const pre = document.createElement('pre');
+  pre.textContent = contenidoFinal;
+  resultadoDiv.appendChild(pre);
+
+  // Descargar ruta nueva
+  const blob = new Blob([contenidoFinal], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = 'ruta_nueva.dat';
+  enlace.textContent = '⬇️ Descargar ruta nueva';
+  enlace.className = 'modal-btn btn-download';
+  resultadoDiv.appendChild(enlace);
+
+  // Construir bloques de texto para correo
+  const bloquesCorreo = yaBuscados.map(b => {
+    const contenedor = extraerContenedor(b);
+    const arxiu = (b.match(/Arxiu:\s*(.+)/) || [])[1]?.trim() || 'Sin dato';
+    const fecha = (b.match(/\d{2}\/\d{2}\/\d{4}/) || [])[0] || 'Sin fecha';
+    return [
+      `Contenedor: ${contenedor} |`,
+      `Arxiu: ${arxiu} |`,
+      `Ya buscado el ${fecha}`,
+      `Devolucion:`,
+      `____________________________________`
+    ].join('\n');
+  });
+
+  const textoCorreo = [
+    'Buen día, consultas buscadas:',
+    '',
+    ...bloquesCorreo,
+    '',
+    'Saludos.'
+  ].join('\n');
+
+  // Botón para enviar por Outlook
+const mailtoLink = `mailto:vegasf@outlook.com?subject=Cajas posiblemente en Odena&body=${encodeURIComponent(textoCorreo)}`;
+const outlookBtn = document.createElement('button');
+outlookBtn.textContent = '📨 Informar contenedores ya buscados';
+outlookBtn.className = 'modal-btn btn-outlook';
+outlookBtn.onclick = () => window.location.href = mailtoLink;
+resultadoDiv.appendChild(outlookBtn);
+
+// Botón para copiar al portapapeles
+const copiarBtn = document.createElement('button');
+copiarBtn.textContent = '📋 Copiar texto para correo';
+copiarBtn.className = 'modal-btn btn-copy';
+copiarBtn.onclick = () => {
+  navigator.clipboard.writeText(textoCorreo)
+    .then(() => alert('✅ Texto copiado al portapapeles. Puedes pegarlo en tu correo.'))
+    .catch(() => alert('⚠️ No se pudo copiar el texto. Intenta manualmente.'));
+};
+resultadoDiv.appendChild(copiarBtn);
+ }
+
+</script>
+</body>
+
+</html>

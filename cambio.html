@@ -1,173 +1,201 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Convertidor y Unificador DAT</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 2em;
-      background: #f4f4f4;
-      color: #222;
-    }
+    <meta charset="UTF-8">
+    <title>Convertidor y Unificador DAT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2em;
+            background: #f4f4f4;
+            color: #222;
+        }
 
-    h1 {
-      font-size: 1.8em;
-      margin-bottom: 0.5em;
-    }
+        h1 {
+            font-size: 1.8em;
+            margin-bottom: 0.5em;
+        }
 
-    h2 {
-      margin-top: 2em;
-      font-size: 1.4em;
-      color: #333;
-    }
+        h2 {
+            margin-top: 2em;
+            font-size: 1.4em;
+            color: #333;
+        }
 
-    input[type="file"],
-    button {
-      font-size: 1.1em;
-      padding: 0.8em 2em;
-      background: #f4f4f4;
-      color: #222;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: background 0.3s ease, transform 0.2s ease;
-      margin-top: 0.5em;
-      margin-bottom: 1em;
-    }
+        input[type="file"],
+        button {
+            font-size: 1.1em;
+            padding: 0.8em 2em;
+            background: #f4f4f4;
+            color: #222;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s ease, transform 0.2s ease;
+            margin-top: 0.5em;
+            margin-bottom: 1em;
+        }
 
-    input[type="file"]::file-selector-button {
-      background: #f4f4f4;
-      color: #222;
-      border: 2px solid #ccc;
-      padding: 0.8em 2em;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: background 0.3s ease, transform 0.2s ease;
-    }
+        input[type="file"]::file-selector-button {
+            background: #f4f4f4;
+            color: #222;
+            border: 2px solid #ccc;
+            padding: 0.8em 2em;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
 
-    button:hover,
-    input[type="file"]::file-selector-button:hover {
-      background: #e0e0e0;
-      transform: scale(1.02);
-    }
+        button:hover,
+        input[type="file"]::file-selector-button:hover {
+            background: #e0e0e0;
+            transform: scale(1.02);
+        }
 
-    #resultado1, #resultado2 {
-      margin-top: 1em;
-      white-space: pre-wrap;
-      background: #fff;
-      padding: 1em;
-      border: 1px solid #ccc;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-  </style>
+        #resultado1,
+        #resultado2 {
+            margin-top: 1em;
+            white-space: pre-wrap;
+            background: #fff;
+            padding: 1em;
+            border: 1px solid #ccc;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
 </head>
+
 <body>
-  <h1>Convertidor y Unificador de Archivos DAT</h1>
+    <h1>Convertidor y Unificador de Archivos DAT</h1>
 
-  <!-- Paso 1 -->
-  <h2> Paso 1: Convertir XLSX/CSV a DAT</h2>
-  <input type="file" id="fileXLS" accept=".xlsx,.csv" />
-  <button onclick="descargarXLS()">⬇️ Descargar DAT generado</button>
-  <div id="resultado1"></div>
+    <!-- Paso 1 -->
+    <h2> Paso 1: Convertir XLSX/CSV a DAT</h2>
+    <input type="file" id="fileXLS" accept=".xlsx,.csv" />
+    <button onclick="descargarXLS()">⬇️ Descargar DAT generado</button>
+    <div id="resultado1"></div>
 
-  <!-- Paso 2 -->
-  <h2>Paso 2: Unir múltiples archivos DAT</h2>
-  <input type="file" id="fileDAT" accept=".dat" multiple />
-  <button onclick="descargarDAT()">⬇️ Descargar DAT combinado</button>
-  <div id="resultado2"></div>
+    <!-- Paso 2 -->
+    <h2>Paso 2: Unir múltiples archivos DAT</h2>
+    <input type="file" id="fileDAT" accept=".dat" multiple />
+    <button onclick="descargarDAT()">⬇️ Descargar DAT combinado</button>
+    <div id="resultado2"></div>
 
-  <script>
-    let resultadoXLS = '';
-    let resultadoDAT = '';
+    <script>
+        let resultadoXLS = '';
+        let resultadoDAT = '';
 
-    const normalizarPalet = texto =>
-      texto.replace(/[\W_]*palet[\W_]*/gi, '-PALET-');
+        const normalizarPalet = texto =>
+            texto.replace(/[\W_]*palet[\W_]*/gi, '-PALET-');
 
-    // Paso 1: Convertir XLSX/CSV
-    document.getElementById('fileXLS').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-
-      if (file.name.endsWith('.csv')) {
-        reader.onload = function (e) {
-          const texto = e.target.result;
-          const lineas = texto.split('\n')
-            .map(l => normalizarPalet(l.trim()))
-            .filter(l => l);
-          resultadoXLS = lineas.join('\n');
-          document.getElementById('resultado1').textContent = resultadoXLS;
+        const esLineaValida = l => {
+            const limpio = l.replace(/\s+/g, ' ').trim();
+            return limpio &&
+                !limpio.includes('✅ Rutas con depósito permitido') &&
+                !limpio.startsWith('❌');
         };
-        reader.readAsText(file);
-      } else if (file.name.endsWith('.xlsx')) {
-        reader.onload = function (e) {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const hoja = workbook.Sheets[workbook.SheetNames[0]];
-          const filas = XLSX.utils.sheet_to_json(hoja, { header: 1 });
 
-          const valores = filas.flat()
-            .map(v => normalizarPalet(String(v).trim()))
-            .filter(v => v);
-          resultadoXLS = valores.join('\n');
-          document.getElementById('resultado1').textContent = resultadoXLS;
-        };
-        reader.readAsArrayBuffer(file);
-      } else {
-        alert('⚠️ Formato no soportado. Usa .xlsx o .csv');
-      }
-    });
+        // Paso 1: Convertir XLSX/CSV
+        document.getElementById('fileXLS').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
 
-    function descargarXLS() {
-      if (!resultadoXLS) {
-        alert('⚠️ No hay contenido para descargar.');
-        return;
-      }
-      const blob = new Blob([resultadoXLS.trim()], { type: 'text/plain' });
-      const enlace = document.createElement('a');
-      enlace.href = URL.createObjectURL(blob);
-      enlace.download = 'convertido.dat';
-      enlace.click();
-    }
+            if (file.name.endsWith('.csv')) {
+                reader.onload = function (e) {
+                    const texto = e.target.result;
+                    const lineas = texto.split('\n')
+                        .map(l => normalizarPalet(l.trim()))
+                        .filter(esLineaValida);
 
-    // Paso 2: Unir DAT
-    document.getElementById('fileDAT').addEventListener('change', function (e) {
-      const archivos = Array.from(e.target.files);
-      resultadoDAT = '';
-      let pendientes = archivos.length;
+                    resultadoXLS = lineas.join('\n\n');
+                    document.getElementById('resultado1').textContent = resultadoXLS;
+                };
+                reader.readAsText(file);
+            } else if (file.name.endsWith('.xlsx')) {
+                reader.onload = function (e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const hoja = workbook.Sheets[workbook.SheetNames[0]];
+                    const filas = XLSX.utils.sheet_to_json(hoja, { header: 1 });
 
-      archivos.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          const texto = event.target.result;
-          const lineas = texto.split('\n')
-            .map(l => normalizarPalet(l.trim()))
-            .filter(l => l);
-          resultadoDAT += lineas.join('\n') + '\n';
+                    const valores = filas.flat()
+                        .map(v => normalizarPalet(String(v).trim()))
+                        .filter(esLineaValida);
 
-          pendientes--;
-          if (pendientes === 0) {
-            document.getElementById('resultado2').textContent = resultadoDAT.trim();
-          }
-        };
-        reader.readAsText(file);
-      });
-    });
+                    resultadoXLS = valores.join('\n');
+                    document.getElementById('resultado1').textContent = resultadoXLS;
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert('⚠️ Formato no soportado. Usa .xlsx o .csv');
+            }
+        });
 
-    function descargarDAT() {
-      if (!resultadoDAT) {
-        alert('⚠️ No hay contenido para descargar.');
-        return;
-      }
-      const blob = new Blob([resultadoDAT.trim()], { type: 'text/plain' });
-      const enlace = document.createElement('a');
-      enlace.href = URL.createObjectURL(blob);
-      enlace.download = 'unificado.dat';
-      enlace.click();
-    }
-  </script>
+        function descargarXLS() {
+            if (!resultadoXLS) {
+                alert('⚠️ No hay contenido para descargar.');
+                return;
+            }
+            const blob = new Blob([resultadoXLS.trim()], { type: 'text/plain' });
+            const enlace = document.createElement('a');
+            enlace.href = URL.createObjectURL(blob);
+            enlace.download = 'convertido.dat';
+            enlace.click();
+        }
+
+        // Paso 2: Unir DAT
+        document.getElementById('fileDAT').addEventListener('change', function (e) {
+            const archivos = Array.from(e.target.files);
+            resultadoDAT = '';
+            let pendientes = archivos.length;
+
+            archivos.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const texto = event.target.result;
+                    const bloques = texto.split(/\n{2,}/); // separa por bloques reales
+                    const bloquesValidos = bloques
+                        .map(b => b.trim())
+                        .filter(b => {
+                            const limpio = b.replace(/\s+/g, ' ');
+                            return limpio &&
+                                !limpio.includes('✅ Rutas con depósito permitido');
+                        });
+
+                    resultadoDAT += bloquesValidos.join('\n\n') + '\n\n';
+
+                    pendientes--;
+                    if (pendientes === 0) {
+                        document.getElementById('resultado2').innerHTML = ''; // limpia antes
+                        document.getElementById('resultado2').textContent = resultadoDAT.trim();
+
+                        // ✅ Mensaje visual sin afectar el contenido
+                        const mensaje = document.createElement('div');
+                        mensaje.textContent = '✅ Rutas con depósito permitido';
+                        mensaje.style.color = '#2e7d32';
+                        mensaje.style.fontWeight = 'bold';
+                        mensaje.style.marginTop = '1em';
+                        document.getElementById('resultado2').appendChild(mensaje);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        });
+
+        function descargarDAT() {
+            if (!resultadoDAT) {
+                alert('⚠️ No hay contenido para descargar.');
+                return;
+            }
+            const blob = new Blob([resultadoDAT.trim()], { type: 'text/plain' });
+            const enlace = document.createElement('a');
+            enlace.href = URL.createObjectURL(blob);
+            enlace.download = 'unificado.dat';
+            enlace.click();
+        }
+    </script>
 </body>
+
 </html>

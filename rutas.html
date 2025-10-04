@@ -4,270 +4,387 @@
   <meta charset="UTF-8">
   <title>📦 Filtro de Rutas PDF</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f4f6f8;
-      padding: 2em;
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --rojo: #d32f2f;
+    --gris: #6e6c6c;
+    --gris-claro: #f4f6f8;
+    --blanco: #fff;
+  }
+
+ body{
+      margin:0; padding:0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg,var(--brand-light), #f7f7f7);
+      color:var(--text);
+      min-height:100vh;
+      display:flex; flex-direction:column;
     }
 
-    h1 {
-      text-align: center;
-      color: #333;
-    }
+  /* 🔴 Barra superior */
+  header {
+    display: flex;
+    align-items: center;
+    background: var(--rojo);
+    padding: 0.8em 1.2em;
+    color: var(--blanco);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
 
+  header .brand a {
+    text-decoration: none;
+    color: var(--blanco);
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  h1 {
+    text-align: center;
+    color: var(--rojo);
+    margin: 1em 0;
+    font-size: 1.5rem;
+  }
+
+  #controls {
+    text-align: center;
+    margin-bottom: 1em;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5em;
+  }
+
+  #fileInput {
+    display: none;
+  }
+
+  .btn-file {
+    background: var(--gris);
+    color: var(--blanco);
+    padding: 0.7em 1em;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    flex: 1 1 45%;
+    max-width: 220px;
+    transition: 0.3s;
+    text-align: center;
+  }
+
+  .btn-file:hover {
+    background: #635e5e;
+  }
+
+  /* Botones principales */
+  .action-btn {
+    font-size: 1em;
+    padding: 0.7em 1em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1 1 45%;
+    max-width: 220px;
+    background: var(--rojo);
+    color: var(--blanco);
+    font-weight: bold;
+  }
+
+  .action-btn:hover {
+    background: #b71c1c;
+  }
+
+  /* Modal */
+  #modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+  }
+
+  #modalContent {
+    background: var(--blanco);
+    padding: 2em;
+    border-radius: 8px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  #modalContent h2 {
+    margin-bottom: 1em;
+    color: var(--gris);
+  }
+
+  .modal-btn {
+    display: block;
+    width: 100%;
+    padding: 0.8em;
+    margin-top: 0.8em;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+    font-size: 1em;
+  }
+
+  .btn-download { background: var(--rojo); color: var(--blanco); }
+  .btn-download:hover { background: #b71c1c; }
+
+  .btn-gmail { background: #9f5852; color: var(--blanco); }
+  .btn-gmail:hover { background: #c33d2f; }
+
+  .btn-outlook { background: #0078d4; color: var(--blanco); }
+  .btn-outlook:hover { background: #005fa3; }
+
+  .btn-cancel { background: #aaa; color: var(--blanco); }
+  .btn-cancel:hover { background: #777; }
+
+  @keyframes fadeIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
     #controls {
-      text-align: center;
-      margin-bottom: 1em;
+      flex-direction: column;
+      align-items: center;
     }
-
-    input[type="file"], button {
-      font-size: 1em;
-      padding: 0.5em 1em;
-      margin: 0.5em;
+    .btn-file,
+    .action-btn {
+      flex: 1 1 100%;
+      max-width: none;
+      width: 70%;
     }
-
-    #status {
-      text-align: center;
-      font-weight: bold;
-      color: #0078d4;
-      margin-bottom: 1em;
+    h1 {
+      font-size: 1.2rem;
     }
-
-    #routes {
-      background: #fff;
-      padding: 1em;
-      border-radius: 8px;
+    header .brand a {
+      font-size: 1rem;
     }
-
-    .route {
-      padding: 0.5em;
-      margin: 0.5em 0;
-      border-left: 5px solid #0078d4;
-      background: #eef;
-    }
-
-    .route.not-found {
-      background-color: #ffe5e5;
-      border-left: 4px solid red;
-    }
-
-    hr {
-      margin: 2em 0;
-      border: none;
-      border-top: 2px dashed #ccc;
-    }
-  </style>
+  }
+</style>
 </head>
 <body>
+  <header>
+    <div class="brand">
+      <a href="index.html">ARADOC ARTES</a>
+    </div>
+  </header>
+
   <h1>📦 Filtro de Rutas PDF</h1>
 
   <div id="controls">
     <input type="file" id="fileInput" multiple accept="application/pdf" />
-    <button onclick="extractText()">📝 Leer PDFs</button>
-    <button onclick="descargarDAT()">📥 Guardar como .dat</button>
-  </div>
-  
-  <div id="controls">
-   <div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:999;">
-  <div id="modalContent" style="background:white;padding:2em;border-radius:8px;max-width:500px;text-align:center;"></div>
-</div>
-    
+    <label for="fileInput" class="btn-file">📂 Seleccionar PDFs</label>
+    <button class="action-btn" onclick="extractText()">📝 Leer PDFs</button>
+    <button class="action-btn" onclick="descargarDAT()">📥 Guardar como .dat</button>
   </div>
 
+  <!-- Modal -->
+  <div id="modal">
+    <div id="modalContent"></div>
+  </div>
 
   <div id="status">Esperando archivo PDF...</div>
   <div id="routes"></div>
 
-  <script>
-    let pdfDocs = [];
-    let rutasPermitidas = [];
-    let rutasSinDeposito = [];
+<script>
+  let pdfDocs = [];
+  let rutasPermitidas = [];
+  let rutasSinDeposito = [];
 
-    document.getElementById('fileInput').addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files);
-      if (files.length === 0) return;
+  document.getElementById('fileInput').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-      pdfDocs = [];
-      document.getElementById('status').textContent = `📂 Cargando ${files.length} PDF(s)...`;
+    pdfDocs = [];
+    document.getElementById('status').textContent = `📂 Cargando ${files.length} PDF(s)...`;
 
-      for (const file of files) {
-        const reader = new FileReader();
-        reader.onload = async function () {
-          const typedarray = new Uint8Array(this.result);
-          try {
-            const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
-            pdfDocs.push({ name: file.name, doc });
-            document.getElementById('status').textContent = `✅ ${pdfDocs.length}/${files.length} PDF(s) listos`;
-          } catch (err) {
-            console.error(`❌ Error al cargar ${file.name}:`, err);
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    });
-
-    async function extractText() {
-      if (pdfDocs.length === 0) return alert('Carga uno o más PDFs primero');
-      let textoExtraido = [];
-
-      for (const { name, doc } of pdfDocs) {
-        for (let i = 1; i <= doc.numPages; i++) {
-          const page = await doc.getPage(i);
-          const content = await page.getTextContent();
-          const strings = content.items.map(item => item.str).join(' ');
-          textoExtraido.push(strings);
+    for (const file of files) {
+      const reader = new FileReader();
+      reader.onload = async function () {
+        const typedarray = new Uint8Array(this.result);
+        try {
+          const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
+          pdfDocs.push({ name: file.name, doc });
+          document.getElementById('status').textContent = `✅ ${pdfDocs.length}/${files.length} PDF(s) listos`;
+        } catch (err) {
+          console.error(`❌ Error al cargar ${file.name}:`, err);
         }
-      }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  });
 
-      const texto = textoExtraido.join('\n\n');
-      analizarRutas(texto);
+  async function extractText() {
+    if (pdfDocs.length === 0) return alert('Carga uno o más PDFs primero');
+    let textoExtraido = [];
+
+    for (const { doc } of pdfDocs) {
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map(item => item.str).join(' ');
+        textoExtraido.push(strings);
+      }
     }
 
-    function analizarRutas(texto) {
-      const regex = /Arxiu:\s*(.+?)\s*Tipus:\s*(\S+)\s*Dipòsit:\s*(\d*)?\s*Pis:\s*(\d*)?\s*Carrer:\s*(\d*)?\s*Columna:\s*(\d*)?\s*Nivell:\s*(\d*)?\s*Serie:\s*(\d*)?\s*Contenidor:\s*(\d+)/gi;
-      rutasPermitidas = [];
-      rutasSinDeposito = [];
-      let match;
-      const depositosPermitidos = ['45', '46', '47', '48', '49'];
+    const texto = textoExtraido.join('\n\n');
+    analizarRutas(texto);
+  }
 
-      while ((match = regex.exec(texto)) !== null) {
-        const depositoRaw = match[3]?.trim() || '';
-        const ruta = {
-          arxiu: match[1],
-          deposito: depositoRaw,
-          piso: match[4] || '',
-          carrer: match[5] || '',
-          columna: match[6] || '',
-          nivell: match[7] || '',
-          contenedor: match[9]
-        };
+  function analizarRutas(texto) {
+    const regex = /Arxiu:\s*(.+?)\s*Tipus:\s*(\S+)\s*Dipòsit:\s*(\d*)?\s*Pis:\s*(\d*)?\s*Carrer:\s*(\d*)?\s*Columna:\s*(\d*)?\s*Nivell:\s*(\d*)?\s*Serie:\s*(\d*)?\s*Contenidor:\s*(\d+)/gi;
+    rutasPermitidas = [];
+    rutasSinDeposito = [];
+    let match;
+    const depositosPermitidos = ['45', '46', '47', '48', '49'];
 
-        if (depositosPermitidos.includes(depositoRaw)) {
-          rutasPermitidas.push(ruta);
-        } else if (depositoRaw === '' || depositoRaw === '0') {
-          rutasSinDeposito.push(ruta);
-        }
+    while ((match = regex.exec(texto)) !== null) {
+      const depositoRaw = match[3]?.trim() || '';
+      const ruta = {
+        arxiu: match[1],
+        deposito: depositoRaw,
+        piso: match[4] || '',
+        carrer: match[5] || '',
+        columna: match[6] || '',
+        nivell: match[7] || '',
+        contenedor: match[9]
+      };
+
+      if (depositosPermitidos.includes(depositoRaw)) {
+        rutasPermitidas.push(ruta);
+      } else if (depositoRaw === '' || depositoRaw === '0') {
+        rutasSinDeposito.push(ruta);
       }
-
-      mostrarResumen();
     }
 
-    function mostrarResumen() {
-      const container = document.getElementById('routes');
-      container.innerHTML = '';
+    mostrarResumen();
+  }
 
-      if (rutasPermitidas.length > 0) {
-        container.innerHTML += '<h2>✅ Rutas con depósito permitido</h2>';
-        rutasPermitidas.forEach(r => {
-          container.innerHTML += `
-            <div class="route">
-              <strong>Contenedor:</strong> ${r.contenedor}<br>
-              <strong>Arxiu:</strong> ${r.arxiu}<br>
-              <strong>Depósito:</strong> ${r.deposito} | <strong>Pis:</strong> ${r.piso}<br>
-              <strong>Carrer:</strong> ${r.carrer} | <strong>Columna:</strong> ${r.columna} | <strong>Nivell:</strong> ${r.nivell}
-            </div>
-          `;
-        });
-      }
+  function mostrarResumen() {
+    const container = document.getElementById('routes');
+    container.innerHTML = '';
 
-      if (rutasSinDeposito.length > 0) {
-        container.innerHTML += '<hr><h2>❌ Rutas sin depósito (0 o vacío)</h2>';
-        rutasSinDeposito.forEach(r => {
-          container.innerHTML += `
-            <div class="route not-found">
-              <strong>Contenedor:</strong> ${r.contenedor}<br>
-              <strong>Arxiu:</strong> ${r.arxiu}<br>
-              <strong>Depósito:</strong> ${r.deposito || 'Vacío'}<br>
-              <strong>Pis:</strong> ${r.piso || 'Sin dato'}<br>
-              <strong>Carrer:</strong> ${r.carrer || 'Sin dato'}<br>
-              <strong>Columna:</strong> ${r.columna || 'Sin dato'}<br>
-              <strong>Nivell:</strong> ${r.nivell || 'Sin dato'}<br>
-              ⚠️ Requiere revisión
-            </div>
-          `;
-        });
-      }
-
-      document.getElementById('status').textContent = `✅ ${rutasPermitidas.length} válidas | ❌ ${rutasSinDeposito.length} sin ubicación`;
+    if (rutasPermitidas.length > 0) {
+      container.innerHTML += '<h2>✅ Rutas con depósito permitido</h2>';
+      rutasPermitidas.forEach(r => {
+        container.innerHTML += `
+          <div class="route">
+            <strong>Contenedor:</strong> ${r.contenedor}<br>
+            <strong>Arxiu:</strong> ${r.arxiu}<br>
+            <strong>Depósito:</strong> ${r.deposito} | <strong>Pis:</strong> ${r.piso}<br>
+            <strong>Carrer:</strong> ${r.carrer} | <strong>Columna:</strong> ${r.columna} | <strong>Nivell:</strong> ${r.nivell}
+          </div>
+        `;
+      });
     }
 
-   function descargarDAT() {
-  if (rutasPermitidas.length === 0 && rutasSinDeposito.length === 0) {
-    alert("No hay rutas para guardar.");
-    return;
+    if (rutasSinDeposito.length > 0) {
+      container.innerHTML += '<hr><h2>❌ Rutas sin depósito (0 o vacío)</h2>';
+      rutasSinDeposito.forEach(r => {
+        container.innerHTML += `
+          <div class="route not-found">
+            <strong>Contenedor:</strong> ${r.contenedor}<br>
+            <strong>Arxiu:</strong> ${r.arxiu}<br>
+            <strong>Depósito:</strong> ${r.deposito || 'Vacío'}<br>
+            <strong>Pis:</strong> ${r.piso || 'Sin dato'}<br>
+            <strong>Carrer:</strong> ${r.carrer || 'Sin dato'}<br>
+            <strong>Columna:</strong> ${r.columna || 'Sin dato'}<br>
+            <strong>Nivell:</strong> ${r.nivell || 'Sin dato'}<br>
+            ⚠️ Requiere revisión
+          </div>
+        `;
+      });
+    }
+
+    document.getElementById('status').textContent = `✅ ${rutasPermitidas.length} válidas | ❌ ${rutasSinDeposito.length} sin ubicación`;
   }
 
-  const fecha = new Date();
-  const yyyy = fecha.getFullYear();
-  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
-  const dd = String(fecha.getDate()).padStart(2, '0');
-  const fechaTexto = `${dd}/${mm}/${yyyy}`;
+  function descargarDAT() {
+    if (rutasPermitidas.length === 0 && rutasSinDeposito.length === 0) {
+      alert("No hay rutas para guardar.");
+      return;
+    }
 
-  let contenido = '';
+    const fecha = new Date();
+    const yyyy = fecha.getFullYear();
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    const fechaTexto = `${dd}/${mm}/${yyyy}`;
 
-  if (rutasPermitidas.length > 0) {
-    contenido += '✅ Rutas con depósito permitido:\n\n';
-    contenido += rutasPermitidas.map(r => {
-      return `Contenedor: ${r.contenedor}\nArxiu: ${r.arxiu}\nDepósito: ${r.deposito} | Pis: ${r.piso}\nCarrer: ${r.carrer} | Columna: ${r.columna} | Nivell: ${r.nivell}\n${fechaTexto}`;
-    }).join('\n\n');
+    let contenido = '';
+
+    if (rutasPermitidas.length > 0) {
+      contenido += '✅ Rutas con depósito permitido:\n\n';
+      contenido += rutasPermitidas.map(r => {
+        return `Contenedor: ${r.contenedor}\nArxiu: ${r.arxiu}\nDepósito: ${r.deposito} | Pis: ${r.piso}\nCarrer: ${r.carrer} | Columna: ${r.columna} | Nivell: ${r.nivell}\n${fechaTexto}`;
+      }).join('\n\n');
+    }
+    if (rutasSinDeposito.length > 0) {
+      contenido += '\n\n❌ Rutas sin depósito (0 o vacío):\n\n';
+      contenido += rutasSinDeposito.map(r => {
+        return `Contenedor: ${r.contenedor}\nArxiu: ${r.arxiu}\nDepósito: ${r.deposito || 'Vacío'}\nPis: ${r.piso || 'Sin dato'}\nCarrer: ${r.carrer || 'Sin dato'}\nColumna: ${r.columna || 'Sin dato'}\nNivell: ${r.nivell || 'Sin dato'}\n❌ Pendiente de revisión ${fechaTexto}`;
+      }).join('\n\n');
+    }
+
+    const nombreArchivo = `Pdf_de_rutas_filtradas_${yyyy}-${mm}-${dd}.dat`;
+    const blob = new Blob([contenido], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+
+    // Modal
+    const modal = document.getElementById('modal');
+    const content = document.getElementById('modalContent');
+    content.innerHTML = `<h2>📤 ¿Qué deseas hacer con el archivo?</h2>`;
+
+    const descargarBtn = document.createElement('button');
+    descargarBtn.textContent = '📥 Descargar archivo .dat';
+    descargarBtn.className = 'modal-btn btn-download';
+    descargarBtn.onclick = () => {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = nombreArchivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+    content.appendChild(descargarBtn);
+
+    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=vegasf@outlook.com&su=Rutas filtradas&body=Adjunto archivo generado: ${nombreArchivo}`;
+    const gmailBtn = document.createElement('button');
+    gmailBtn.textContent = '📧 Enviar por Gmail';
+    gmailBtn.className = 'modal-btn btn-gmail';
+    gmailBtn.onclick = () => window.open(gmailLink, '_blank');
+    content.appendChild(gmailBtn);
+
+    const mailtoLink = `mailto:vegasf@outlook.com?subject=Rutas filtradas&body=Adjunto archivo generado: ${nombreArchivo}`;
+    const outlookBtn = document.createElement('button');
+    outlookBtn.textContent = '📨 Enviar por Outlook u otro';
+    outlookBtn.className = 'modal-btn btn-outlook';
+    outlookBtn.onclick = () => window.location.href = mailtoLink;
+    content.appendChild(outlookBtn);
+
+    const cerrarBtn = document.createElement('button');
+    cerrarBtn.textContent = '❌ Cancelar';
+    cerrarBtn.className = 'modal-btn btn-cancel';
+    cerrarBtn.onclick = () => modal.style.display = 'none';
+    content.appendChild(cerrarBtn);
+
+    modal.style.display = 'flex';
   }
-  if (rutasSinDeposito.length > 0) {
-    contenido += '\n\n❌ Rutas sin depósito (0 o vacío):\n\n';
-    contenido += rutasSinDeposito.map(r => {
-      return `Contenedor: ${r.contenedor}\nArxiu: ${r.arxiu}\nDepósito: ${r.deposito || 'Vacío'}\nPis: ${r.piso || 'Sin dato'}\nCarrer: ${r.carrer || 'Sin dato'}\nColumna: ${r.columna || 'Sin dato'}\nNivell: ${r.nivell || 'Sin dato'}\n❌ Pendiente de revisión ${fechaTexto}`;
-    }).join('\n\n');
-  }
-
-  const nombreArchivo = `rutas_filtradas_${yyyy}-${mm}-${dd}.dat`;
-  const blob = new Blob([contenido], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-
-  // Mostrar modal con opciones
-  const modal = document.getElementById('modal');
-  const content = document.getElementById('modalContent');
-  content.innerHTML = `<h2>📤 ¿Qué deseas hacer con el archivo?</h2>`;
-
-  // Botón de descarga
-  const descargarBtn = document.createElement('button');
-  descargarBtn.textContent = '📥 Descargar archivo .dat';
-  descargarBtn.style = 'width:100%;padding:1em;margin-top:1em;';
-  descargarBtn.onclick = () => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = nombreArchivo;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    // modal.style.display = 'none';
-  };
-  content.appendChild(descargarBtn);
-
-  // Botón Gmail
-  const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=vegasf@outlook.com&su=Rutas filtradas&body=Adjunto archivo generado: ${nombreArchivo}`;
-  const gmailBtn = document.createElement('button');
-  gmailBtn.textContent = '📧 Enviar por Gmail';
-  gmailBtn.style = 'width:100%;padding:1em;margin-top:0.5em;';
-  gmailBtn.onclick = () => window.open(gmailLink, '_blank');
-  content.appendChild(gmailBtn);
-
-  // Botón Outlook / genérico
-  const mailtoLink = `mailto:vegasf@outlook.com?subject=Rutas filtradas&body=Adjunto archivo generado: ${nombreArchivo}`;
-  const outlookBtn = document.createElement('button');
-  outlookBtn.textContent = '📨 Enviar por Outlook u otro';
-  outlookBtn.style = 'width:100%;padding:1em;margin-top:0.5em;';
-  outlookBtn.onclick = () => window.location.href = mailtoLink;
-  content.appendChild(outlookBtn);
-
-  // Botón cerrar
-  const cerrarBtn = document.createElement('button');
-  cerrarBtn.textContent = '❌ Cancelar';
-  cerrarBtn.style = 'width:100%;padding:1em;margin-top:1em;background:#ccc;';
-  cerrarBtn.onclick = () => modal.style.display = 'none';
-  content.appendChild(cerrarBtn);
-
-  modal.style.display = 'flex';
-}
-  </script>
+</script>
 </body>
 </html>

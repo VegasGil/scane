@@ -261,16 +261,7 @@ console.log("Rutas detectadas:", rutas);
       cerrarModal();
       setTimeout(mostrarSiguienteCaja, 300);
     }
-function filtrarBloques(texto) {
-  const bloques = texto.split(/\n{2,}/); // separa por bloques
-  const filtrados = bloques.filter(b => !b.includes('❌ No localizada'));
-  return filtrados.join('\n\n');
-}
 
-// Ejemplo de uso:
-const textoOriginal = `...`; // aquí va todo tu texto completo
-const resultadoFiltrado = filtrarBloques(textoOriginal);
-console.log(resultadoFiltrado);
     // === Función que pediste que se volviera a añadir (descargarFinal) ===
     function descargarFinal() {
       if (rutasConfirmadas.length === 0) {

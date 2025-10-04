@@ -1,81 +1,235 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Gestión de Palets (.dat)</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            padding: 20px;
-            background: #f4f4f4;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Palets (.dat)</title>
+  <style>
+    :root {
+      --rojo: #d32f2f;
+      --gris: #6e6c6c;
+      --gris-claro: #f4f4f4;
+      --blanco: #fff;
+    }
 
-        h1 {
-            text-align: center;
-        }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: var(--gris-claro);
+      color: var(--gris);
+    }
 
-        input,
-        button,
-        select {
-            padding: 10px;
-            margin: 10px 5px;
-            font-size: 16px;
-        }
+    header {
+      background: var(--rojo);
+      color: var(--blanco);
+      padding: 1em 1.5em;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      width: 100%;
+    }
 
-        #result,
-        #listado {
-            background: #fff;
-            padding: 15px;
-            border: 1px solid #ccc;
-            margin-top: 10px;
-        }
+    header .brand a {
+      text-decoration: none;
+      color: var(--blanco);
+      font-size: 1.4rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
+    main {
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
 
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: left;
-        }
+    h1 {
+      text-align: center;
+      color: var(--rojo);
+      margin: 1em 0;
+      font-size: 1.6rem;
+    }
 
-        #acciones {
-            margin-top: 10px;
-        }
+    input, button, select {
+      padding: 10px;
+      margin: 10px 5px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
 
-        #modalAviso {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-        }
+    button {
+      cursor: pointer;
+      background: var(--rojo);
+      color: var(--blanco);
+      border: none;
+      transition: background 0.3s ease;
+    }
 
-        #modalAviso .contenido {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            text-align: center;
-            max-width: 400px;
-        }
+    button:hover {
+      background: #b71c1c;
+    }
 
-        #modalAviso button {
-            margin: 10px;
-        }
-    </style>
+    #result, #listado {
+      background: #fff;
+      padding: 15px;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+      border-radius: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+
+    #acciones {
+      margin-top: 20px;
+    }
+
+   /* 🔎 Filtros y Listados */
+#filtros {
+  margin-top: 2em;
+  padding: 1em;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+#filtros h3 {
+  margin-bottom: 1em;
+  color: var(--rojo);
+}
+
+#filtros button,
+#filtros select {
+  margin: 0.5em 0.5em 0.5em 0;
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+#filtros button {
+  background: var(--rojo);
+  color: var(--blanco);
+  border: none;
+  cursor: pointer;
+}
+
+#filtros button:hover {
+  background: #b71c1c;
+}
+
+#modalAviso {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+}
+
+#modalAviso .contenido {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+
+}
+
+#modalAviso button {
+  margin: 10px;
+  padding: 10px 14px;
+  font-weight: bold;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+#modalAviso button:first-of-type {
+  background: #4CAF50;
+  color: white;
+}
+
+#modalAviso button:last-of-type {
+  background: #aaa;
+  color: white;
+}
+
+#modalAviso button:hover {
+  opacity: 0.9;
+}
+section {
+  margin-top: 2em;
+}
+@media (max-width: 600px) {
+  main {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 1.2rem;
+    margin: 0.8em 0;
+  }
+
+  input, button, select,
+  #filtros button,
+  #filtros select {
+    width: 100%;
+    margin: 8px 0;
+    font-size: 1rem;
+  }
+
+  #result, #listado {
+    padding: 10px;
+    font-size: 0.95rem;
+  }
+
+  table {
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 6px;
+  }
+
+  header .brand a {
+    font-size: 1.1rem;
+  }
+
+  #filtros {
+    padding: 0.8em;
+  }
+
+  #modalAviso .contenido {
+    padding: 20px;
+  }
+}
+  </style>
 </head>
 
 <body>
+  <header>
+    <div class="brand">
+      <a href="index.html">ARADOC ARTES</a>
+    </div>
+  </header>
+  <main>
     <h1>Gestión de Palets (.dat)</h1>
 
     <input type="file" id="fileInput" accept=".dat">
@@ -87,41 +241,44 @@
     <div id="result"></div>
 
     <div id="acciones" style="display:none;">
-        <label>Acción:
-            <select id="accion">
-                <option value="prestamo">Préstamo</option>
-                <option value="devolucion">Devolución</option>
-            </select>
-        </label>
-        <label>Fecha:
-            <input type="date" id="fecha">
-        </label>
-        <button onclick="aplicarCambio()">Aplicar cambio</button>
-        <button onclick="guardarArchivo()">Guardar archivo</button>
+      <label>Acción:
+        <select id="accion">
+          <option value="prestamo">Préstamo</option>
+          <option value="devolucion">Devolución</option>
+        </select>
+      </label>
+      <label>Fecha:
+        <input type="date" id="fecha">
+      </label>
+      <button onclick="aplicarCambio()">Aplicar cambio</button>
+      <button onclick="guardarArchivo()">Guardar archivo</button>
     </div>
+  </main>
 
-    <hr>
-    <h3>Filtros y Listados</h3>
-    <button onclick="listarTodo()">Listar todo</button>
-    <button onclick="filtrarEstado('PRESTAMO')">Ver préstamos</button>
-    <button onclick="filtrarEstado('DEVOLUCION')">Ver devoluciones</button>
-    <select id="pasilloSelect" onchange="filtrarPasillo()">
-        <option value="">Filtrar por pasillo</option>
-    </select>
-    <select id="paletSelect" onchange="filtrarPalet()">
-        <option value="">Filtrar por palet</option>
-    </select>
+<hr>
+<div id="filtros">
+  <h3>Filtros y Listados</h3>
+  <button onclick="listarTodo()">Listar todo</button>
+  <button onclick="filtrarEstado('PRESTAMO')">Ver préstamos</button>
+  <button onclick="filtrarEstado('DEVOLUCION')">Ver devoluciones</button>
+  <select id="pasilloSelect" onchange="filtrarPasillo()">
+    <option value="">Filtrar por pasillo</option>
+  </select>
+  <select id="paletSelect" onchange="filtrarPalet()">
+    <option value="">Filtrar por palet</option>
+  </select>
+</div>
 
-    <div id="listado"></div>
+<div id="listado"></div>
 
-    <div id="modalAviso">
-        <div class="contenido">
-            <h3>⚠️ Cambios sin guardar</h3>
-            <p>Hay modificaciones pendientes. ¿Deseas guardar antes de continuar?</p>
-            <button onclick="guardarArchivo(); cerrarModal()">Guardar y continuar</button>
-            <button onclick="cerrarModal()">Continuar sin guardar</button>
-        </div>
-    </div>
+<div id="modalAviso">
+  <div class="contenido">
+    <h3>⚠️ Cambios sin guardar</h3>
+    <p>Hay modificaciones pendientes. ¿Deseas guardar antes de continuar?</p>
+    <button onclick="guardarArchivo(); cerrarModal()">Guardar y continuar</button>
+    <button onclick="cerrarModal()">Continuar sin guardar</button>
+  </div>
+</div>
 
     <script>
         let referencias = [];
