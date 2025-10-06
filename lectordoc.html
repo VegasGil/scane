@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Gestión de Rutas PDF y DAT</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+       :root {
+    --rojo: #d32f2f;
+    --gris: #6e6c6c;
+    --gris-claro: #f4f6f8;
+    --blanco: #fff;
+  }
+
+ body{
+      margin:0; padding:0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg,var(--brand-light), #f7f7f7);
+      color:var(--text);
+      min-height:100vh;
+      display:flex; flex-direction:column;
+    }
+    header {
+    display: flex;
+    align-items: center;
+    background: var(--rojo);
+    padding: 0.8em 1.2em;
+    color: var(--blanco);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+   header .brand a {
+    text-decoration: none;
+    color: var(--blanco);
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  h1 {
+    text-align: center;
+    color: var(--rojo);
+    margin: 1em 0;
+    font-size: 1.5rem;
+  }
+
+
+        main {
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        input,
+        button,
+        select {
+            padding: 10px;
+            margin: 10px 5px;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #b71c1c;
+        }
+
+        .section {
+            background: white;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .route {
+            border-bottom: 1px solid #ccc;
+            padding: 10px 0;
+        }
+
+        .not-found {
+            background: #ffecec;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 600px) {
+
+            input,
+            button,
+            select {
+                width: 100%;
+                margin: 8px 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+    <div class="brand">
+      <a href="index.html">ARADOC ARTES</a>
+    </div>
+  </header>
+    <h1>📦 Gestión de Rutas PDF y DAT</h1>
+    <main>
+        <div class="section">
+            <h2>📂 Visualizar Información</h2>
+            <input type="file" id="pdfInput" multiple accept=".pdf" />
+
+            <button onclick="extraerYMostrar()">Analizar PDFs</button>
+            <input type="file" id="datInput" accept=".dat">
+            <button onclick="cargarDAT()">Cargar DAT</button>
+            <div id="status"></div>
+            <pre id="contenidoDAT"
+                style="white-space: pre-wrap; background: #f9f9f9; padding: 10px; border: 1px solid #ccc;"></pre>
+            <div id="status"></div>
+        </div>
+
+        <div class="section">
+            <!-- <h2>🔍 Filtros y acciones</h2>
+            <input type="text" id="clienteInput" placeholder="Buscar cliente o consulta" />
+            <button onclick="filtrarPorCliente()">Buscar</button>
+            <button onclick="verNoVerificados()">Ver no verificados</button>
+            <button onclick="verTodos()">Ver todos</button>
+            <button onclick="verificarSeleccionados()">
+                Verificar por depósito
+            </button> -->
+            <!-- <button onclick="imprimirReporte()">Imprimir PDF</button> -->
+            <button onclick="imprimir()">Imprimir</button>
+            <button onclick="guardarReporteDAT()">Guardar como .dat</button>
+        </div>
+
+        <div class="section" id="tablaRutas"></div>
+    </main>
+
+    <script>
+        let pdfDocs = [],
+            rutas = [];
+
+        document
+            .getElementById("pdfInput")
+            .addEventListener("change", async (e) => {
+                const files = Array.from(e.target.files);
+                pdfDocs = [];
+                document.getElementById(
+                    "status"
+                ).textContent = `📂 Cargando ${files.length} PDF(s)...`;
+                for (const file of files) {
+                    const reader = new FileReader();
+                    reader.onload = async function () {
+                        const typedarray = new Uint8Array(this.result);
+                        try {
+                            const doc = await pdfjsLib.getDocument({ data: typedarray })
+                                .promise;
+                            pdfDocs.push({ name: file.name, doc });
+                            document.getElementById(
+                                "status"
+                            ).textContent = `✅ ${pdfDocs.length}/${files.length} PDF(s) listos`;
+                        } catch (err) {
+                            console.error(`❌ Error al cargar ${file.name}:`, err);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            });
+
+        async function extraerYMostrar() {
+            if (pdfDocs.length === 0) return alert("Carga uno o más PDFs primero");
+            rutas = [];
+            for (const { doc } of pdfDocs) {
+                for (let i = 1; i <= doc.numPages; i++) {
+                    const page = await doc.getPage(i);
+                    const content = await page.getTextContent();
+                    const texto = content.items.map((item) => item.str).join(" ");
+                    analizarTexto(texto);
+                }
+            }
+            mostrarTabla();
+        }
+
+        function analizarTexto(texto) {
+            const bloques = texto.split(/(?=Client:|Consulta:)/gi);
+
+            let clienteActual = "";
+            let fechaActual = "";
+
+            bloques.forEach((bloque) => {
+                let consultaActual = "";
+
+                const clienteMatch = bloque.match(/Client:\s*([^\n\r]+?)(?=\s+Data:|\s+Consulta:|\s+Servei:|$)/i);
+                const consultaMatch = bloque.match(/Consulta:\s*(\d+)/i);
+                const fechaMatch = bloque.match(/Data:\s*(\d{2}\/\d{2}\/\d{4})/i);
+
+                if (clienteMatch) clienteActual = clienteMatch[1].trim();
+                if (fechaMatch) fechaActual = fechaMatch[1].trim();
+                if (consultaMatch) consultaActual = consultaMatch[1].trim();
+
+                const regex =
+                    /Arxiu:\s*(.+?)\s*Tipus:\s*(\S+)\s*Dipòsit:\s*(\d*)?\s*Pis:\s*(\d*)?\s*Carrer:\s*(\d*)?\s*Columna:\s*(\d*)?\s*Nivell:\s*(\d*)?\s*Serie:\s*(\d*)?\s*Contenidor:\s*(\d+)/gi;
+
+                let match;
+                while ((match = regex.exec(bloque)) !== null) {
+                    rutas.push({
+                        cliente: clienteActual,
+                        consulta: consultaActual,
+                        fecha: fechaActual,
+                        arxiu: match[1],
+                        deposito: match[3] || "",
+                        piso: match[4] || "",
+                        carrer: match[5] || "",
+                        columna: match[6] || "",
+                        nivell: match[7] || "",
+                        serie: match[8] || "",
+                        contenedor: match[9],
+                        verificado: ["45", "46", "47", "48", "49"].includes(match[3]),
+                    });
+                }
+            });
+        }
+
+        function mostrarTabla(filtradas = rutas) {
+            const div = document.getElementById("tablaRutas");
+
+            // Filtrar solo rutas verificadas
+            const soloVerificados = filtradas.filter(r => r.verificado);
+            div.innerHTML = `<h2>📋 Rutas verificadas: ${soloVerificados.length}</h2>`;
+
+            const agrupadas = agruparPorConsulta(soloVerificados);
+
+            agrupadas.forEach((grupo) => {
+                div.innerHTML += `
+      <div class="grupo-consulta">
+        <h3>🔎 Consulta: ${grupo.consulta || "Sin dato"}</h3>
+        <p><strong>Cliente:</strong> ${grupo.cliente || "Sin dato"}<br>
+        <strong>Fecha:</strong> ${grupo.fecha || "Sin dato"}</p>
+      </div>
+    `;
+
+                grupo.contenedores.forEach((r) => {
+                    const ubicacionCompleta = r.deposito && r.piso && r.carrer && r.columna && r.nivell;
+                    const estadoUbicacion = ubicacionCompleta ? "Ubicación asignada" : "Ubicación pendiente";
+                    div.innerHTML += `
+        <div class="route">
+        <strong>Contenedor:</strong> ${r.contenedor}<br>
+        <strong>Arxiu:</strong> ${r.arxiu}<br>
+        <strong>Depósito:</strong> ${r.deposito || "Vacío"}<br>
+        <strong>Estado:</strong> ✅ Verificado<br>
+        <strong>Ubicación:</strong> ${estadoUbicacion}
+        </div>
+     `;
+                });
+
+
+                div.innerHTML += `<hr>`;
+            });
+        }
+        function filtrarPorCliente() {
+            const filtro = document
+                .getElementById("clienteInput")
+                .value.trim()
+                .toLowerCase();
+            const filtradas = rutas.filter(
+                (r) =>
+                    r.cliente.toLowerCase().includes(filtro) ||
+                    r.consulta.toLowerCase().includes(filtro)
+            );
+            mostrarTabla(filtradas);
+        }
+
+        function verNoVerificados() {
+            mostrarTabla(rutas.filter((r) => !r.verificado));
+        }
+
+        function verTodos() {
+            mostrarTabla(rutas);
+        }
+
+        function verificarSeleccionados() {
+            rutas.forEach((r) => {
+                if (["45", "46", "47", "48", "49"].includes(r.deposito))
+                    r.verificado = true;
+            });
+            mostrarTabla();
+        }
+  function imprimirReporte() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ format: "letter", unit: "mm" }); // tamaño carta
+  const fechaHoy = new Date().toLocaleDateString("es-ES");
+  let y = 20;
+  const limiteInferior = 270;
+
+  // Encabezado superior
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("Aradoc Artes - Reporte Diario", 20, y);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Fecha de impresión: ${fechaHoy}`, 20, y + 7);
+
+  y += 20;
+  doc.setFontSize(11);
+  doc.text("Reporte de Testimonio", 20, y);
+  y += 10;
+
+  const depositosPermitidos = ["45", "46", "47", "48", "49"];
+  const filtradas = rutas.filter((r) =>
+    depositosPermitidos.includes(r.deposito)
+  );
+
+  const agrupadas = agruparPorConsulta(filtradas);
+
+  agrupadas.forEach((grupo) => {
+    const encabezado = [
+      `Consulta: ${grupo.consulta || "Sin dato"}`,
+      `Cliente: ${grupo.cliente || "Sin dato"}`,
+      `Fecha: ${grupo.fecha || "Sin dato"}`,
+    ];
+
+    encabezado.forEach((linea) => {
+      doc.text(linea, 20, y);
+      y += 7;
+    });
+
+    y += 5;
+
+    grupo.contenedores.forEach((r) => {
+      const ubicacionCompleta = r.deposito && r.piso && r.carrer && r.columna && r.nivell;
+      const estadoUbicacion = ubicacionCompleta ? "Ubicación asignada" : "Ubicación pendiente";
+
+      const bloque = [
+        `Contenedor: ${r.contenedor}`,
+        `Arxiu: ${r.arxiu}`,
+        `Depósito: ${r.deposito}`,
+        `Estado: Verificado`,
+        `Ubicación: ${estadoUbicacion}`,
+        `_____________________________`,
+      ];
+
+      bloque.forEach((linea) => {
+        doc.text(linea, 20, y);
+        y += 7;
+      });
+
+      y += 5;
+      if (y > limiteInferior) {
+        doc.addPage();
+        y = 20;
+
+        // Repetir encabezado en nueva página
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Aradoc Artes - Reporte Diario", 20, y);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Fecha de impresión: ${fechaHoy}`, 20, y + 7);
+        y += 20;
+        doc.setFontSize(11);
+        doc.text("Reporte de Testimonio", 20, y);
+        y += 10;
+      }
+    });
+
+    y += 10;
+  });
+
+  doc.save("Reporte_Diario.pdf");
+}
+
+        function agruparPorConsulta(lista) {
+            const mapa = new Map();
+            lista.forEach((r) => {
+                const clave = `${r.consulta}-${r.cliente}`;
+                if (!mapa.has(clave)) {
+                    mapa.set(clave, {
+                        consulta: r.consulta,
+                        cliente: r.cliente,
+                        fecha: r.fecha,
+                        contenedores: [],
+                    });
+                }
+                mapa.get(clave).contenedores.push(r);
+            });
+
+            return Array.from(mapa.values());
+        }
+
+        function guardarReporteDAT() {
+            const fecha = new Date().toLocaleDateString();
+            const contenido = rutas
+                .map((r) => {
+                    return `Contenedor: ${r.contenedor}
+                    Cliente: ${r.cliente || "Sin dato"}
+                    Consulta: ${r.consulta || "Sin dato"}
+                    Depósito: ${r.deposito || "Vacío"}
+                    Estado: ${r.verificado ? "Localizado" : "No localizado"}
+                    Fecha: ${fecha}`;
+                })
+                .join("\n\n");
+
+            const blob = new Blob([contenido], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const enlace = document.createElement("a");
+            enlace.href = url;
+            enlace.download = `reporte_rutas_${fecha.replace(/\//g, "-")}.dat`;
+            enlace.click();
+        }
+
+        function cargarDAT() {
+            const input = document.getElementById("datInput");
+            const file = input.files[0];
+
+            if (!file) {
+                alert("Selecciona un archivo .dat para cargar");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                const texto = reader.result;
+
+                // Mostrar el contenido tal cual en pantalla
+                const pre = document.getElementById("contenidoDAT");
+                pre.textContent = texto;
+
+                // También puedes mostrar cuántas líneas tiene
+                const lineas = texto.split(/\r?\n/).length;
+                console.log(`✅ Archivo DAT cargado con ${lineas} líneas`);
+            };
+
+            reader.readAsText(file);
+        }
+        function imprimirContenidoDAT() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ format: "letter", unit: "mm" });
+  const fechaHoy = new Date().toLocaleDateString("es-ES");
+  let y = 20;
+
+  // Encabezado
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("Aradoc Artes - Reporte Diario", 20, y);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Fecha de impresión: ${fechaHoy}`, 20, y + 7);
+
+  y += 20;
+  doc.setFontSize(11);
+  doc.text("Contenido original del archivo DAT", 20, y);
+  y += 10;
+
+  // Obtener el texto del <pre>
+  const texto = document.getElementById("contenidoDAT").textContent;
+  const lineas = texto.split(/\r?\n/);
+
+  lineas.forEach((linea) => {
+    doc.text(linea, 20, y);
+    y += 7;
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Aradoc Artes - Reporte Diario", 20, y);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Fecha de impresión: ${fechaHoy}`, 20, y + 7);
+      y += 20;
+      doc.setFontSize(11);
+    }
+  });
+
+  doc.save("Contenido_DAT.pdf");
+}
+function imprimir() {
+  const textoCrudo = document.getElementById("contenidoDAT").textContent.trim();
+  const hayTextoCrudo = textoCrudo.length > 0;
+  const hayRutas = Array.isArray(rutas) && rutas.length > 0;
+
+  if (hayRutas) {
+    imprimirReporte(); // imprime el PDF procesado
+  } else if (hayTextoCrudo) {
+    imprimirContenidoDAT(); // imprime el texto crudo
+  } else {
+    alert("No hay datos para imprimir.");
+  }
+}
+    </script>
+</body>
+
+</html>

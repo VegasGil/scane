@@ -98,7 +98,7 @@
       <div id="controls">
         <div class="file-wrap">
           <label class="file-label" for="fileInput">📁 Seleccionar archivo .dat</label>
-          <input id="fileInput" type="file" accept=".dat" />
+          <input id="fileInput" type="file" accept=".dat,.pdf" multiple />
         </div>
 
         <div class="controls-row">
@@ -111,6 +111,7 @@
     </div>
 
     <div id="confirmadas" aria-live="polite"></div>
+    <div id="resumen" style="margin-top:2rem; font-weight:600;"></div>
   </main>
 
   <div id="modal" aria-hidden="true">
@@ -118,7 +119,7 @@
   </div>
 
   <footer>© 2025 ARADOC ARTES — Colores corporativos: rojo · gris · blanco</footer>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
   <script>
     // Variables globales (se mantienen entre recargas si lo deseas)
     let rutas = [];
@@ -127,65 +128,137 @@
     let depositosSeleccionados = [];
     let actualIndex = 0;
 
+    function filtrarPorDeposito(rutas, permitidos = ['45', '46', '47', '48', '49']) {
+  const permitidas = [];
+  const sinDeposito = [];
+
+  rutas.forEach(r => {
+    const deposito = r.deposito?.trim() || '';
+    if (permitidos.includes(deposito)) {
+      permitidas.push(r);
+    } else if (deposito === '' || deposito === '0') {
+      sinDeposito.push(r);
+    }
+  });
+
+  return { permitidas, sinDeposito };
+}
+function analizarRutasDesdePDF(texto) {
+  const bloques = texto.split(/Contenidor:/i); // separa por contenedor
+  const rutasPDF = [];
+
+  bloques.forEach(b => {
+    const cont = b.match(/(\d+)/)?.[1] || '';
+    const arxiu = b.match(/Arxiu:\s*(.+?)(\s|$)/)?.[1] || '';
+    const deposito = b.match(/Dipòsit:\s*(\d+)/)?.[1] || '';
+    const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
+    const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
+    const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
+    const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
+
+    if (cont && deposito) {
+      rutasPDF.push({
+        contenedor: cont,
+        arxiu,
+        deposito,
+        piso,
+        carrer,
+        columna,
+        nivell,
+        origen: 'PDF'
+      });
+    }
+  });
+
+  return rutasPDF;
+}
+
     // File input handling (hacemos click en la etiqueta para que funcione bonito)
     const fileInput = document.getElementById('fileInput');
     const fileLabel = document.querySelector('.file-label');
    
 
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const text = await file.text();
-      rutas = parsearRutas(text);
-      const depositosValidos = ['45','46','47','48','49'];
-      const depositosEncontrados = [...new Set(rutas.map(r => r.deposito).filter(d => depositosValidos.includes(d)))].sort((a,b) => b - a);
-      if (depositosEncontrados.length === 0) {
-        alert('No se han encontrado depósitos válidos en el archivo.');
-        return;
+  fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const extension = file.name.split('.').pop().toLowerCase();
+
+  if (extension === 'dat') {
+    const text = await file.text();
+    const rutasDAT = parsearRutas(text);
+    const { permitidas, sinDeposito } = filtrarPorDeposito(rutasDAT);
+    rutas = permitidas;
+    rutasSinDeposito = sinDeposito;
+    const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
+    if (depositosEncontrados.length === 0) {
+      alert('No se han encontrado depósitos válidos en el archivo.');
+      return;
+    }
+    mostrarModalSeleccion(depositosEncontrados);
+    console.log("Archivo DAT cargado:", file.name);
+    console.log("Rutas detectadas:", rutas);
+  }
+
+  else if (extension === 'pdf') {
+    const reader = new FileReader();
+    reader.onload = async function () {
+      const typedarray = new Uint8Array(this.result);
+      try {
+        const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
+        let textoExtraido = [];
+        for (let i = 1; i <= doc.numPages; i++) {
+          const page = await doc.getPage(i);
+          const content = await page.getTextContent();
+          const strings = content.items.map(item => item.str).join(' ');
+          textoExtraido.push(strings);
+        }
+        const texto = textoExtraido.join('\n\n');
+        const rutasPDF = analizarRutasDesdePDF(texto);
+        const { permitidas, sinDeposito } = filtrarPorDeposito(rutasPDF);
+        rutas = permitidas;
+        rutasSinDeposito = sinDeposito;
+        const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
+        if (depositosEncontrados.length === 0) {
+          alert('No se han encontrado depósitos válidos en el PDF.');
+          return;
+        }
+        mostrarModalSeleccion(depositosEncontrados);
+        console.log("Archivo PDF cargado:", file.name);
+        console.log("Rutas detectadas:", rutas);
+      } catch (err) {
+        console.error(`❌ Error al cargar ${file.name}:`, err);
       }
-      mostrarModalSeleccion(depositosEncontrados);
-    });
-console.log("Archivo cargado:", file.name);
-console.log("Contenido leído:", text.slice(0, 500)); // primeros 500 caracteres
-console.log("Rutas detectadas:", rutas);
-    function parsearRutas(texto) {
-      const bloques = texto.split(/\n{2,}/);
-      const rutas = [];
-      bloques.forEach(b => {
-        const cont = b.match(/Contenedor:\s*(\d+)/)?.[1] || '';
-        const arxiu = b.match(/Arxiu:\s*(.+)/)?.[1] || '';
-        const deposito = b.match(/Depósito:\s*(\d+)/)?.[1] || '';
-        const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
-        const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
-        const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
-        const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
-        const fecha = b.match(/\d{2}\/\d{2}\/\d{4}/)?.[0] || '';
-        if (cont && deposito) rutas.push({ contenedor: cont, arxiu, deposito, piso, carrer, columna, nivell, fecha });
-      });
-      return rutas;
-    }
+    };
+    reader.readAsArrayBuffer(file);
+  }
 
-    function mostrarModalSeleccion(depositos) {
-      const modal = document.getElementById('modal');
-      const content = document.getElementById('modalContent');
-      depositosSeleccionados = [];
+  else {
+    alert('⚠️ Solo se permiten archivos .dat o .pdf');
+  }
+  function mostrarModalSeleccion(depositos) {
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+  depositosSeleccionados = [];
 
-      let html = `<h2>Selecciona depósitos a revisar</h2>`;
-      html += `<div class="deposit-list">`;
-      depositos.forEach(d => {
-        html += `<button class="deposit-btn" onclick="toggleDeposito('${d}', this)">Depósito ${d}</button>`;
-      });
-      html += `</div>`;
-      html += `<div style="margin-top:1rem; display:flex; gap:0.6rem;">
-                <button class="btn btn-primary" style="flex:1" onclick="confirmarSeleccion()">Comenzar revisión</button>
-                <button class="btn btn-secondary" style="flex:1" onclick="cerrarModal()">Cancelar</button>
-               </div>`;
+  let html = `<h2>Selecciona depósitos a revisar</h2>`;
+  html += `<div class="deposit-list">`;
+  depositos.forEach(d => {
+    html += `<button class="deposit-btn" onclick="toggleDeposito('${d}', this)">Depósito ${d}</button>`;
+  });
+  html += `</div>`;
 
-      content.innerHTML = html;
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden','false');
-    }
+  // ✅ Botones de acción
+  html += `<div style="margin-top:1rem; display:flex; gap:0.6rem;">
+    <button class="btn btn-primary" style="flex:1" onclick="confirmarSeleccion()">Comenzar revisión</button>
+    <button class="btn btn-secondary" style="flex:1" onclick="cerrarModal()">Cancelar</button>
+  </div>`;
 
+  content.innerHTML = html;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden','false');
+}
+});
     function toggleDeposito(valor, boton) {
       const index = depositosSeleccionados.indexOf(valor);
       if (index === -1) {
@@ -196,22 +269,77 @@ console.log("Rutas detectadas:", rutas);
         boton.classList.remove('active');
       }
     }
+function parsearRutas(texto) {
+  const bloques = texto.split(/\n{2,}/);
+  const rutas = [];
 
-    function confirmarSeleccion() {
-      if (depositosSeleccionados.length === 0) {
-        alert('⚠️ Selecciona al menos un depósito para continuar.');
-        return;
-      }
-      rutasFiltradas = rutas.filter(r => depositosSeleccionados.includes(r.deposito));
-      if (rutasFiltradas.length === 0) {
-        alert('⚠️ No hay rutas para los depósitos seleccionados. Selecciona otros depósitos.');
-        return;
-      }
-      actualIndex = 0;
-      cerrarModal();
-      document.getElementById('status').textContent = `✅ ${rutasFiltradas.length} cajas para revisar. Comenzando...`;
-      setTimeout(mostrarSiguienteCaja, 500);
+  bloques.forEach(b => {
+    const cont = b.match(/Contenedor:\s*(\d+)/)?.[1] || '';
+    const arxiu = b.match(/Arxiu:\s*(.+)/)?.[1] || '';
+    const deposito = b.match(/Depósito:\s*(\d+)/)?.[1] || '';
+    const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
+    const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
+    const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
+    const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
+    const fecha = b.match(/\d{2}\/\d{2}\/\d{4}/)?.[0] || '';
+
+    if (cont && deposito) {
+      rutas.push({
+        contenedor: cont,
+        arxiu,
+        deposito,
+        piso,
+        carrer,
+        columna,
+        nivell,
+        fecha,
+        origen: 'DAT' // ✅ Aquí se marca el origen
+      });
     }
+  });
+
+  return rutas;
+}
+  function confirmarSeleccion() {
+  if (depositosSeleccionados.length === 0) {
+    alert('⚠️ Selecciona al menos un depósito para continuar.');
+    return;
+  }
+
+  // Agrupar y ordenar rutas por depósito seleccionado
+  const rutasAgrupadas = depositosSeleccionados.flatMap(deposito => {
+    const grupo = rutas
+      .filter(r => r.deposito === deposito)
+      .sort((a, b) => {
+        // Ordenar por columna, luego nivel, luego contenedor (de mayor a menor)
+        return (
+          (b.columna || 0) - (a.columna || 0) ||
+          (b.nivell || 0) - (a.nivell || 0) ||
+          (b.contenedor || 0) - (a.contenedor || 0)
+        );
+      });
+
+    // 🔧 Parche de prueba: mostrar orden en consola
+    console.log(`📦 Depósito ${deposito} - ${grupo.length} rutas ordenadas:`);
+    grupo.forEach((r, i) => {
+      console.log(`${i + 1}. Contenedor ${r.contenedor} | Columna ${r.columna} | Nivel ${r.nivell}`);
+    });
+
+    return grupo;
+  });
+
+  rutasFiltradas = rutasAgrupadas;
+
+  if (rutasFiltradas.length === 0) {
+    alert('⚠️ No hay rutas para los depósitos seleccionados. Selecciona otros depósitos.');
+    return;
+  }
+
+  actualIndex = 0;
+  cerrarModal();
+  document.getElementById('status').textContent = `✅ ${rutasFiltradas.length} cajas para revisar. Comenzando...`;
+  setTimeout(mostrarSiguienteCaja, 500);
+}
 
     function mostrarSiguienteCaja() {
       if (actualIndex >= rutasFiltradas.length) {
@@ -249,12 +377,13 @@ console.log("Rutas detectadas:", rutas);
       const div = document.createElement('div');
       div.className = 'confirmada ' + (encontrada ? 'encontrada' : 'no-encontrada');
       div.innerHTML = `
-        <strong>Contenedor:</strong> ${ruta.contenedor}<br>
-        <strong>Arxiu:</strong> ${ruta.arxiu}<br>
-        <strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}<br>
-        <strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}<br>
-        <strong>Estado:</strong> ${ruta.estado}
-      `;
+  <strong>Contenedor:</strong> ${ruta.contenedor}<br>
+  <strong>Arxiu:</strong> ${ruta.arxiu}<br>
+  <strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}<br>
+  <strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}<br>
+  <strong>Estado:</strong> ${ruta.estado}<br>
+  <strong>Origen:</strong> ${ruta.origen}
+`;
       document.getElementById('confirmadas').appendChild(div);
 
       actualIndex++;
@@ -318,7 +447,7 @@ console.log(resultadoFiltrado);
       gmailBtn.onclick = () => window.open(gmailLink, '_blank');
 
       // Botón Outlook / genérico (mailto)
-      const mailtoLink = `mailto:vegasf@outlook.com?subject=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
+      const mailtoLink = `mailto:aradocartes@aradoc.cat?subject=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
       const outlookBtn = document.createElement('button');
       outlookBtn.textContent = '📨 Enviar por Outlook u otro';
       outlookBtn.className = 'btn btn-secondary';
@@ -400,6 +529,7 @@ console.log(resultadoFiltrado);
         if (e.target.id === 'modal') cerrarModal();
       });
     });
+    
   </script>
 </body>
 </html>

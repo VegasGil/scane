@@ -61,7 +61,7 @@
     display: none;
   }
 
-  .btn-file {
+  .btn-file,.paso {
     background: var(--gris);
     color: var(--blanco);
     padding: 0.7em 1em;
@@ -191,6 +191,7 @@
     <label for="fileInput" class="btn-file">📂 Seleccionar PDFs</label>
     <button class="action-btn" onclick="extractText()">📝 Leer PDFs</button>
     <button class="action-btn" onclick="descargarDAT()">📥 Guardar como .dat</button>
+    <a class="paso" href="filtrar.html">Paso 2</a> 
   </div>
 
   <!-- Modal -->
@@ -370,7 +371,8 @@
     gmailBtn.onclick = () => window.open(gmailLink, '_blank');
     content.appendChild(gmailBtn);
 
-    const mailtoLink = `mailto:vegasf@outlook.com?subject=Rutas filtradas&body=Adjunto archivo generado: ${nombreArchivo}`;
+
+    const mailtoLink = `mailto:rippermanresa@gmail.com,vegasfalexis@gmail.com?subject=Rutas filtradas&body=Adjunto archivo generado: ${nombreArchivo}`;
     const outlookBtn = document.createElement('button');
     outlookBtn.textContent = '📨 Enviar por Outlook u otro';
     outlookBtn.className = 'modal-btn btn-outlook';

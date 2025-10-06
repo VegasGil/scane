@@ -197,21 +197,46 @@ console.log("Rutas detectadas:", rutas);
       }
     }
 
-    function confirmarSeleccion() {
-      if (depositosSeleccionados.length === 0) {
-        alert('⚠️ Selecciona al menos un depósito para continuar.');
-        return;
-      }
-      rutasFiltradas = rutas.filter(r => depositosSeleccionados.includes(r.deposito));
-      if (rutasFiltradas.length === 0) {
-        alert('⚠️ No hay rutas para los depósitos seleccionados. Selecciona otros depósitos.');
-        return;
-      }
-      actualIndex = 0;
-      cerrarModal();
-      document.getElementById('status').textContent = `✅ ${rutasFiltradas.length} cajas para revisar. Comenzando...`;
-      setTimeout(mostrarSiguienteCaja, 500);
-    }
+  function confirmarSeleccion() {
+  if (depositosSeleccionados.length === 0) {
+    alert('⚠️ Selecciona al menos un depósito para continuar.');
+    return;
+  }
+
+  // Agrupar y ordenar rutas por depósito seleccionado
+  const rutasAgrupadas = depositosSeleccionados.flatMap(deposito => {
+    const grupo = rutas
+      .filter(r => r.deposito === deposito)
+      .sort((a, b) => {
+        // Ordenar por columna, luego nivel, luego contenedor (de mayor a menor)
+        return (
+          (b.columna || 0) - (a.columna || 0) ||
+          (b.nivell || 0) - (a.nivell || 0) ||
+          (b.contenedor || 0) - (a.contenedor || 0)
+        );
+      });
+
+    // 🔧 Parche de prueba: mostrar orden en consola
+    console.log(`📦 Depósito ${deposito} - ${grupo.length} rutas ordenadas:`);
+    grupo.forEach((r, i) => {
+      console.log(`${i + 1}. Contenedor ${r.contenedor} | Columna ${r.columna} | Nivel ${r.nivell}`);
+    });
+
+    return grupo;
+  });
+
+  rutasFiltradas = rutasAgrupadas;
+
+  if (rutasFiltradas.length === 0) {
+    alert('⚠️ No hay rutas para los depósitos seleccionados. Selecciona otros depósitos.');
+    return;
+  }
+
+  actualIndex = 0;
+  cerrarModal();
+  document.getElementById('status').textContent = `✅ ${rutasFiltradas.length} cajas para revisar. Comenzando...`;
+  setTimeout(mostrarSiguienteCaja, 500);
+}
 
     function mostrarSiguienteCaja() {
       if (actualIndex >= rutasFiltradas.length) {
@@ -261,7 +286,16 @@ console.log("Rutas detectadas:", rutas);
       cerrarModal();
       setTimeout(mostrarSiguienteCaja, 300);
     }
+function filtrarBloques(texto) {
+  const bloques = texto.split(/\n{2,}/); // separa por bloques
+  const filtrados = bloques.filter(b => !b.includes('❌ No localizada'));
+  return filtrados.join('\n\n');
+}
 
+// Ejemplo de uso:
+const textoOriginal = `...`; // aquí va todo tu texto completo
+const resultadoFiltrado = filtrarBloques(textoOriginal);
+console.log(resultadoFiltrado);
     // === Función que pediste que se volviera a añadir (descargarFinal) ===
     function descargarFinal() {
       if (rutasConfirmadas.length === 0) {
@@ -309,7 +343,7 @@ console.log("Rutas detectadas:", rutas);
       gmailBtn.onclick = () => window.open(gmailLink, '_blank');
 
       // Botón Outlook / genérico (mailto)
-      const mailtoLink = `mailto:vegasf@outlook.com?subject=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
+      const mailtoLink = `mailto:aradocartes@aradoc.cat?subject=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
       const outlookBtn = document.createElement('button');
       outlookBtn.textContent = '📨 Enviar por Outlook u otro';
       outlookBtn.className = 'btn btn-secondary';
