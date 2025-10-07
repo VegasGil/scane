@@ -48,14 +48,23 @@
       color: #0078d4;
     }
 
-    #output {
+    /* #output {
       white-space: pre-wrap;
       background: white;
       padding: 1em;
       border-radius: 8px;
       max-height: 50vh;
       overflow-y: auto;
-    }
+    } */
+#output {
+  max-height: 300px;         /* o el alto que prefieras */
+  overflow-y: auto;          /* agrega scroll si el texto es largo */
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 1rem;
+  border-radius: 8px;
+  white-space: pre-wrap;     /* mantiene los saltos de línea del join('\n\n') */
+}
 
     #routes {
       margin-top: 1em;
@@ -81,13 +90,17 @@
       margin-top: 2em;
       text-align: center;
     }
+#scanInput {
+  font-size: 1.2em;
+  padding: 0.5em;
+  width: 100%;
+  max-width: 300px;   /* límite máximo para pantallas grandes */
+  text-align: center;
+  display: block;
+  margin: 1rem auto;  /* centra horizontalmente */
+  box-sizing: border-box;
+}
 
-    #scanInput {
-      font-size: 1.2em;
-      padding: 0.5em;
-      width: 300px;
-      text-align: center;
-    }
 
     #scanResult {
       margin-top: 1em;
@@ -119,15 +132,16 @@
     <button onclick="extractText()">📝 Extraer texto</button>
     <button onclick="descargarDAT()">📥 Descargar cajas localizadas (.dat)</button>
   </div>
-  <div id="status">Esperando archivo PDF...</div>
-  <div id="output"></div>
-  <div id="routes"></div>
-
-  <div id="scanner">
+    <div id="scanner">
     <h2>📡 Escaneo de contenedor</h2>
     <input type="text" id="scanInput" placeholder="Escanea aquí" autofocus />
     <div id="scanResult"></div>
   </div>
+  <div id="status">Esperando archivo PDF...</div>
+  <div id="output"></div>
+  <div id="routes"></div>
+
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
   let pdfDocs = [];

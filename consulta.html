@@ -174,69 +174,79 @@ function analizarRutasDesdePDF(texto) {
 }
 
     // File input handling (hacemos click en la etiqueta para que funcione bonito)
-    const fileInput = document.getElementById('fileInput');
-    const fileLabel = document.querySelector('.file-label');
-   
+// File input handling (hacemos click en la etiqueta para que funcione bonito)
+const fileInput = document.getElementById('fileInput');
+const fileLabel = document.querySelector('.file-label');
 
-  fileInput.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+fileInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
 
-  const extension = file.name.split('.').pop().toLowerCase();
+  rutas = [];
+  rutasSinDeposito = [];
 
-  if (extension === 'dat') {
-    const text = await file.text();
-    const rutasDAT = parsearRutas(text);
-    const { permitidas, sinDeposito } = filtrarPorDeposito(rutasDAT);
-    rutas = permitidas;
-    rutasSinDeposito = sinDeposito;
-    const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
-    if (depositosEncontrados.length === 0) {
-      alert('No se han encontrado depósitos válidos en el archivo.');
+  // Procesar cada archivo seleccionado
+  for (const file of files) {
+    const extension = file.name.split('.').pop().toLowerCase();
+
+    if (extension === 'dat') {
+      const text = await file.text();
+      const rutasDAT = parsearRutas(text);
+      const { permitidas, sinDeposito } = filtrarPorDeposito(rutasDAT);
+      rutas.push(...permitidas);
+      rutasSinDeposito.push(...sinDeposito);
+      console.log("✅ Archivo DAT cargado:", file.name);
+    }
+
+    else if (extension === 'pdf') {
+      try {
+        const reader = new FileReader();
+        reader.onload = async function () {
+          const typedarray = new Uint8Array(this.result);
+          try {
+            const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
+            let textoExtraido = [];
+            for (let i = 1; i <= doc.numPages; i++) {
+              const page = await doc.getPage(i);
+              const content = await page.getTextContent();
+              const strings = content.items.map(item => item.str).join(' ');
+              textoExtraido.push(strings);
+            }
+            const texto = textoExtraido.join('\n\n');
+            const rutasPDF = analizarRutasDesdePDF(texto);
+            const { permitidas, sinDeposito } = filtrarPorDeposito(rutasPDF);
+            rutas.push(...permitidas);
+            rutasSinDeposito.push(...sinDeposito);
+            console.log("✅ Archivo PDF cargado:", file.name);
+          } catch (err) {
+            console.error(`❌ Error al procesar ${file.name}:`, err);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (err) {
+        console.error(`❌ Error al leer ${file.name}:`, err);
+      }
+    }
+
+    else {
+      alert(`⚠️ Archivo no permitido: ${file.name}`);
+    }
+  } // fin del for
+
+  // Esperamos un poco para que terminen los FileReaders de PDF
+  setTimeout(() => {
+    if (rutas.length === 0) {
+      alert('⚠️ No se han encontrado depósitos válidos en los archivos cargados.');
       return;
     }
+    const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
     mostrarModalSeleccion(depositosEncontrados);
-    console.log("Archivo DAT cargado:", file.name);
-    console.log("Rutas detectadas:", rutas);
-  }
+    console.log("📦 Total rutas detectadas:", rutas);
+  }, 1000);
+});
 
-  else if (extension === 'pdf') {
-    const reader = new FileReader();
-    reader.onload = async function () {
-      const typedarray = new Uint8Array(this.result);
-      try {
-        const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
-        let textoExtraido = [];
-        for (let i = 1; i <= doc.numPages; i++) {
-          const page = await doc.getPage(i);
-          const content = await page.getTextContent();
-          const strings = content.items.map(item => item.str).join(' ');
-          textoExtraido.push(strings);
-        }
-        const texto = textoExtraido.join('\n\n');
-        const rutasPDF = analizarRutasDesdePDF(texto);
-        const { permitidas, sinDeposito } = filtrarPorDeposito(rutasPDF);
-        rutas = permitidas;
-        rutasSinDeposito = sinDeposito;
-        const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
-        if (depositosEncontrados.length === 0) {
-          alert('No se han encontrado depósitos válidos en el PDF.');
-          return;
-        }
-        mostrarModalSeleccion(depositosEncontrados);
-        console.log("Archivo PDF cargado:", file.name);
-        console.log("Rutas detectadas:", rutas);
-      } catch (err) {
-        console.error(`❌ Error al cargar ${file.name}:`, err);
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  else {
-    alert('⚠️ Solo se permiten archivos .dat o .pdf');
-  }
-  function mostrarModalSeleccion(depositos) {
+// Mostrar modal de selección
+function mostrarModalSeleccion(depositos) {
   const modal = document.getElementById('modal');
   const content = document.getElementById('modalContent');
   depositosSeleccionados = [];
@@ -248,7 +258,6 @@ function analizarRutasDesdePDF(texto) {
   });
   html += `</div>`;
 
-  // ✅ Botones de acción
   html += `<div style="margin-top:1rem; display:flex; gap:0.6rem;">
     <button class="btn btn-primary" style="flex:1" onclick="confirmarSeleccion()">Comenzar revisión</button>
     <button class="btn btn-secondary" style="flex:1" onclick="cerrarModal()">Cancelar</button>
@@ -258,7 +267,10 @@ function analizarRutasDesdePDF(texto) {
   modal.style.display = 'flex';
   modal.setAttribute('aria-hidden','false');
 }
-});
+
+// Permite hacer click en la etiqueta para abrir el selector
+fileLabel.addEventListener('click', () => fileInput.click());
+
     function toggleDeposito(valor, boton) {
       const index = depositosSeleccionados.indexOf(valor);
       if (index === -1) {
@@ -525,9 +537,7 @@ console.log(resultadoFiltrado);
       }
 
       // Permitir cerrar modal al hacer click fuera del contenido
-      document.getElementById('modal').addEventListener('click', (e) => {
-        if (e.target.id === 'modal') cerrarModal();
-      });
+      
     });
     
   </script>

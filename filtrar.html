@@ -221,7 +221,7 @@
 
   <h2>Paso 1: Cargar archivos</h2>
   <div id="controls">
-    <label class="btn-file" for="fileHistorico">📁 Histórico .dat</label>
+    <label class="btn-file" for="fileHistorico">📁 Confirmada .dat</label>
     <input type="file" id="fileHistorico" accept=".dat" />
 
     <label class="btn-file" for="fileActual">📁 Pdf_de_rutas .dat</label>
@@ -232,6 +232,7 @@
   </div>
 
   <div id="resultado"></div>
+
 
   <script>
   let historico = [];
@@ -337,7 +338,7 @@
   ].join('\n');
 
   // Botón para enviar por Outlook
-const mailtoLink = `mailto:vegasf@outlook.com?subject=Cajas posiblemente en Odena&body=${encodeURIComponent(textoCorreo)}`;
+const mailtoLink = `mailto:fernando@aradoc.cat?subject=Cajas posiblemente en Odena&body=${encodeURIComponent(textoCorreo)}`;
 const outlookBtn = document.createElement('button');
 outlookBtn.textContent = '📨 Informar contenedores ya buscados';
 outlookBtn.className = 'modal-btn btn-outlook';
