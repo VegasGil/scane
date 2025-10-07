@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>📦 Filtro de Rutas PDF</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    :root {
+      --rojo: #d32f2f;
+      --gris: #6e6c6c;
+      --gris-claro: #f4f6f8;
+      --blanco: #fff;
+    }
+
+    body {
+      margin: 0; padding: 0;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, var(--gris-claro), #f7f7f7);
+      color: var(--gris);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      background: var(--rojo);
+      padding: 0.8em 1.2em;
+      color: var(--blanco);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    header .brand a {
+      text-decoration: none;
+      color: var(--blanco);
+      font-size: 1.2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--rojo);
+      margin: 1em 0;
+      font-size: 1.5rem;
+    }
+
+    #controls {
+      text-align: center;
+      margin-bottom: 1em;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5em;
+    }
+
+    .btn-file, .action-btn {
+      background: var(--gris);
+      color: var(--blanco);
+      padding: 0.7em 1em;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+      flex: 1 1 45%;
+      max-width: 220px;
+      transition: 0.3s;
+      text-align: center;
+    }
+
+    .btn-file:hover, .action-btn:hover {
+      background: #4a4949;
+    }
+
+    .action-btn {
+      background: var(--rojo);
+    }
+
+    .action-btn:hover {
+      background: #b71c1c;
+    }
+
+    #resultado {
+      margin: 1em auto;
+      width: 90%;
+      max-width: 800px;
+      background: var(--blanco);
+      padding: 1em 1.5em;
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      white-space: pre-wrap;
+      font-size: 0.9rem;
+    }
+
+    .ok { color: green; font-weight: bold; }
+    .alerta { color: var(--rojo); font-weight: bold; }
+
+    @media (max-width: 600px) {
+      #controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      .btn-file, .action-btn {
+        width: 70%;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <a href="#">ARADOC ARTES</a>
+    </div>
+  </header>
+
+  <h1>📦 Filtro de Rutas - Evitar Duplicados</h1>
+
+  <div id="controls">
+    <label for="archivoRutas" class="btn-file">📂 Cargar Rutas Nuevas (.dat)</label>
+    <input type="file" id="archivoRutas" accept=".dat,.txt" hidden>
+
+    <label for="archivoConfirmadas" class="btn-file">📂 Cargar Confirmadas (.dat)</label>
+    <input type="file" id="archivoConfirmadas" accept=".dat,.txt" hidden>
+
+    <button class="action-btn" id="btnFiltrar">🧮 Filtrar</button>
+  </div>
+
+  <div id="resultado">🕓 Esperando archivos...</div>
+<!-- Agrega esto dentro del <head> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    let rutasNuevas = [];
+    let rutasConfirmadas = [];
+
+    // Leer archivo .dat y extraer contenedores
+    function leerArchivo(file, tipo) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const texto = reader.result;
+          const regex = /Contenedor:\s*(\d+)/g;
+          const contenedores = [];
+          let match;
+          while ((match = regex.exec(texto)) !== null) {
+            contenedores.push(match[1]);
+          }
+          resolve(contenedores);
+        };
+        reader.readAsText(file, "UTF-8");
+      });
+    }
+
+    // Manejar selección de archivos
+    document.getElementById("archivoRutas").addEventListener("change", async (e) => {
+      rutasNuevas = await leerArchivo(e.target.files[0], "rutas");
+      document.querySelector('label[for="archivoRutas"]').textContent = `✅ Rutas cargadas (${rutasNuevas.length})`;
+    });
+
+    document.getElementById("archivoConfirmadas").addEventListener("change", async (e) => {
+      rutasConfirmadas = await leerArchivo(e.target.files[0], "confirmadas");
+      document.querySelector('label[for="archivoConfirmadas"]').textContent = `✅ Confirmadas cargadas (${rutasConfirmadas.length})`;
+    });
+
+    // Filtrar duplicados
+   document.getElementById("btnFiltrar").addEventListener("click", async () => {
+  const resultadoDiv = document.getElementById("resultado");
+
+  if (!rutasNuevas.length || !rutasConfirmadas.length) {
+    resultadoDiv.innerHTML = "⚠️ Carga ambos archivos (.dat) antes de filtrar.";
+    return;
+  }
+
+  const setConfirmadas = new Set(rutasConfirmadas);
+  const pendientes = rutasNuevas.filter(c => !setConfirmadas.has(c));
+
+  let resultado = `📋 Resultado del filtrado\n\n`;
+  resultado += `🔹 Total Rutas Nuevas: ${rutasNuevas.length}\n`;
+  resultado += `🔹 Total Confirmadas: ${rutasConfirmadas.length}\n`;
+  resultado += `✅ Pendientes reales: ${pendientes.length}\n\n`;
+
+  if (pendientes.length > 0) {
+    resultado += pendientes.map(c => `Contenedor: ${c}`).join("\n");
+  } else {
+    resultado += "🎉 No hay rutas pendientes, todo procesado.";
+  }
+
+  resultadoDiv.innerHTML = `<pre>${resultado}</pre>`;
+
+  if (pendientes.length > 0) {
+    // Generar PDF usando jsPDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(12);
+    doc.text("Rutas Pendientes Reales", 10, 10);
+
+    pendientes.forEach((c, index) => {
+      doc.text(`${index + 1}. Contenedor: ${c}`, 10, 20 + index * 10);
+    });
+
+    // Nombre de archivo con fecha
+    const fecha = new Date();
+    const yyyy = fecha.getFullYear();
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    const nombreArchivo = `rutas_pendientes_${yyyy}-${mm}-${dd}.pdf`;
+
+    // Descargar PDF
+    doc.save(nombreArchivo);
+
+    // Abrir mailto con aviso
+    const mailtoLink = `mailto:rippermanresa@gmail.com,vegasfalexis@gmail.com?subject=Rutas filtradas&body=Adjunto archivo generado: ${nombreArchivo}`;
+    window.location.href = mailtoLink;
+  }
+});
+
+  </script>
+</body>
+</html>

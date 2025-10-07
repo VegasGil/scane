@@ -121,6 +121,7 @@
   <footer>© 2025 ARADOC ARTES — Colores corporativos: rojo · gris · blanco</footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
   <script>
+     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
     // Variables globales (se mantienen entre recargas si lo deseas)
     let rutas = [];
     let rutasFiltradas = [];
@@ -144,27 +145,36 @@
   return { permitidas, sinDeposito };
 }
 function analizarRutasDesdePDF(texto) {
-  const bloques = texto.split(/Contenidor:/i); // separa por contenedor
   const rutasPDF = [];
 
+  // 💡 Normalizamos espacios y convertimos todo a una sola línea
+  const limpio = texto.replace(/\s+/g, ' ').trim();
+
+  // 💡 Extraemos cada bloque que empiece con "Client:" y termine antes del siguiente "Client:" o el final
+  const bloques = limpio.split(/(?=Client:)/g);
+
   bloques.forEach(b => {
-    const cont = b.match(/(\d+)/)?.[1] || '';
-    const arxiu = b.match(/Arxiu:\s*(.+?)(\s|$)/)?.[1] || '';
+    const client = b.match(/Client:\s*([\d\s\/]+)/)?.[1]?.trim() || '';
+    const arxiu = b.match(/Arxiu:\s*(.+?)(?=\s+Tipus:|$)/)?.[1]?.trim() || '';
     const deposito = b.match(/Dipòsit:\s*(\d+)/)?.[1] || '';
     const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
     const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
     const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
     const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
+    const contenedor = b.match(/Contenidor:\s*(\d+)/)?.[1] || '';
+    const fecha = b.match(/Data:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1] || '';
 
-    if (cont && deposito) {
+    if (contenedor && deposito) {
       rutasPDF.push({
-        contenedor: cont,
+        contenedor,
         arxiu,
         deposito,
         piso,
         carrer,
         columna,
         nivell,
+        client,
+        fecha,
         origen: 'PDF'
       });
     }
@@ -173,7 +183,8 @@ function analizarRutasDesdePDF(texto) {
   return rutasPDF;
 }
 
-    // File input handling (hacemos click en la etiqueta para que funcione bonito)
+
+  
 // File input handling (hacemos click en la etiqueta para que funcione bonito)
 const fileInput = document.getElementById('fileInput');
 const fileLabel = document.querySelector('.file-label');
@@ -213,6 +224,8 @@ fileInput.addEventListener('change', async (e) => {
               textoExtraido.push(strings);
             }
             const texto = textoExtraido.join('\n\n');
+            console.log("📄 Texto extraído del PDF:\n", texto);
+
             const rutasPDF = analizarRutasDesdePDF(texto);
             const { permitidas, sinDeposito } = filtrarPorDeposito(rutasPDF);
             rutas.push(...permitidas);
@@ -242,6 +255,8 @@ fileInput.addEventListener('change', async (e) => {
     const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
     mostrarModalSeleccion(depositosEncontrados);
     console.log("📦 Total rutas detectadas:", rutas);
+     // ✅ Evita que el input vuelva a abrirse automáticamente o se dispare dos veces
+  fileInput.value = '';
   }, 1000);
 });
 
@@ -269,7 +284,7 @@ function mostrarModalSeleccion(depositos) {
 }
 
 // Permite hacer click en la etiqueta para abrir el selector
-fileLabel.addEventListener('click', () => fileInput.click());
+// fileLabel.addEventListener('click', () => fileInput.click());
 
     function toggleDeposito(valor, boton) {
       const index = depositosSeleccionados.indexOf(valor);
@@ -523,6 +538,7 @@ console.log(resultadoFiltrado);
       const modal = document.getElementById('modal');
       modal.style.display = 'none';
       modal.setAttribute('aria-hidden','true');
+       document.body.focus();
     }
 
     // Mantener comportamiento de 'abrir input tras recarga' si se usó antes
@@ -539,7 +555,6 @@ console.log(resultadoFiltrado);
       // Permitir cerrar modal al hacer click fuera del contenido
       
     });
-    
   </script>
 </body>
 </html>

@@ -235,62 +235,107 @@
 
 
   <script>
-  let historico = [];
-  let actual = [];
+let historico = [];
+let actual = [];
 
-  function parsearBloques(texto) {
-    return texto.split(/\n{2,}/).map(b => b.trim()).filter(b => b.startsWith('Contenedor:'));
+function parsearBloques(texto) {
+  return texto.split(/\n{2,}/).map(b => b.trim()).filter(b => b.startsWith('Contenedor:'));
+}
+
+function extraerContenedor(bloque) {
+  const match = bloque.match(/Contenedor:\s*(\d+)/);
+  return match ? match[1] : null;
+}
+
+// Cargar archivos
+document.getElementById('fileHistorico').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const texto = await file.text();
+    historico = parsearBloques(texto);
   }
+});
 
-  function extraerContenedor(bloque) {
-    const match = bloque.match(/Contenedor:\s*(\d+)/);
-    return match ? match[1] : null;
+document.getElementById('fileActual').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const texto = await file.text();
+    actual = parsearBloques(texto);
   }
+});
 
-  function extraerContenedorNoLocalizados(bloques) {
-    return new Set(
-      bloques
-        .filter(b => b.includes('❌ No localizada'))
-        .map(b => extraerContenedor(b))
-    );
-  }
-
-  document.getElementById('fileHistorico').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const texto = await file.text();
-      historico = parsearBloques(texto);
-    }
-  });
-
-  document.getElementById('fileActual').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const texto = await file.text();
-      actual = parsearBloques(texto);
-    }
-  });
-
- function comparar() {
-  if (historico.length === 0 || actual.length === 0) {
+function comparar() {
+  if (!historico.length || !actual.length) {
     alert('⚠️ Carga ambos archivos antes de comparar.');
     return;
   }
 
-  const noLocalizadosHistorico = extraerContenedorNoLocalizados(historico);
+  // Contenedores del histórico
+  const contHistorico = new Set(historico.map(b => extraerContenedor(b)));
 
-  const nuevos = actual.filter(b => {
-    const contenedor = extraerContenedor(b);
-    return !noLocalizadosHistorico.has(contenedor);
-  });
+  // Pendientes reales: no están en histórico
+  const pendientes = actual.filter(b => !contHistorico.has(extraerContenedor(b)));
 
-  const yaBuscados = actual.filter(b => {
-    const contenedor = extraerContenedor(b);
-    return noLocalizadosHistorico.has(contenedor);
-  });
+  // Ya procesados: están en histórico
+  const yaProcesados = actual.filter(b => contHistorico.has(extraerContenedor(b)));
+
+  // No localizadas: solo los ❌ del histórico
+  const noLocalizadas = historico.filter(b => b.includes('❌ No localizada'));
 
   const resultadoDiv = document.getElementById('resultado');
   resultadoDiv.innerHTML = '';
+
+  // 1️⃣ Resumen
+  const resumen = document.createElement('div');
+  resumen.textContent = `✅ Pendientes reales: ${pendientes.length} | 🟡 Ya procesadas: ${yaProcesados.length} | ❌ No localizadas: ${noLocalizadas.length}`;
+  resumen.style.fontWeight = 'bold';
+  resumen.style.marginBottom = '1em';
+  resultadoDiv.appendChild(resumen);
+
+  // 2️⃣ Mostrar pendientes y descargar
+  if (pendientes.length) {
+    const pre = document.createElement('pre');
+    pre.textContent = pendientes.join('\n\n');
+    resultadoDiv.appendChild(pre);
+
+    const blob = new Blob([pendientes.join('\n\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = 'ruta_pendientes.dat';
+    enlace.textContent = '⬇️ Descargar ruta pendiente';
+    enlace.className = 'modal-btn btn-download';
+    resultadoDiv.appendChild(enlace);
+  }
+
+  // 3️⃣ Correo con ❌ no localizadas
+  if (noLocalizadas.length) {
+    const textoCorreo = noLocalizadas.map(b => {
+      const cont = extraerContenedor(b);
+      const arxiu = (b.match(/Arxiu:\s*(.+)/) || [])[1] || '';
+      const fecha = (b.match(/\d{2}\/\d{2}\/\d{4}/) || [0])[0] || '';
+      return `Contenedor: ${cont}\nArxiu: ${arxiu}\nFecha: ${fecha}\n`;
+    }).join('\n----------------\n');
+
+    const mailtoLink = `mailto:fernando@aradoc.cat?subject=Rutas filtradas&body=${encodeURIComponent(textoCorreo)}`;
+
+
+    const btnMail = document.createElement('button');
+    btnMail.textContent = '📨 Enviar correo con no localizadas';
+    btnMail.className = 'modal-btn btn-outlook';
+    btnMail.onclick = () => window.location.href = mailtoLink;
+    resultadoDiv.appendChild(btnMail);
+
+    // Botón copiar al portapapeles
+    const copiarBtn = document.createElement('button');
+    copiarBtn.textContent = '📋 Copiar texto para correo';
+    copiarBtn.className = 'modal-btn btn-copy';
+    copiarBtn.onclick = () => navigator.clipboard.writeText(textoCorreo);
+    resultadoDiv.appendChild(copiarBtn);
+  }
+}
+
+
 
   // Mostrar resumen
   const resumen = document.createElement('div');
@@ -306,14 +351,28 @@
   resultadoDiv.appendChild(pre);
 
   // Descargar ruta nueva
-  const blob = new Blob([contenidoFinal], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const enlace = document.createElement('a');
-  enlace.href = url;
-  enlace.download = 'ruta_nueva.dat';
-  enlace.textContent = '⬇️ Descargar ruta nueva';
-  enlace.className = 'modal-btn btn-download';
-  resultadoDiv.appendChild(enlace);
+ // Descargar ruta nueva
+const blob = new Blob([contenidoFinal], { type: 'text/plain' });
+const url = URL.createObjectURL(blob);
+const enlace = document.createElement('a');
+enlace.href = url;
+enlace.download = 'ruta_nueva.dat';
+enlace.textContent = '⬇️ Descargar ruta nueva';
+enlace.className = 'modal-btn btn-download';
+resultadoDiv.appendChild(enlace);
+
+// Crear botón para enviar por correo
+const nombreArchivo = 'ruta_nueva.dat';
+mailtoLink = `mailto:rippermanresa@gmail.com,vegasfalexis@gmail.com?subject=Rutas filtradas&body=${encodeURIComponent(
+  `Adjunto archivo generado: ${nombreArchivo}\n\nPor favor, revisa las rutas pendientes.`
+)}`;
+
+const btnMail = document.createElement('button');
+btnMail.textContent = '📨 Enviar por correo';
+btnMail.className = 'modal-btn btn-outlook';
+btnMail.onclick = () => window.location.href = mailtoLink;
+resultadoDiv.appendChild(btnMail);
+
 
   // Construir bloques de texto para correo
   const bloquesCorreo = yaBuscados.map(b => {
@@ -338,7 +397,8 @@
   ].join('\n');
 
   // Botón para enviar por Outlook
-const mailtoLink = `mailto:fernando@aradoc.cat?subject=Cajas posiblemente en Odena&body=${encodeURIComponent(textoCorreo)}`;
+const mailtoLink = `mailto:fernando@aradoc.cat?subject=Rutas filtradas&body=${encodeURIComponent(textoCorreo)}`;
+
 const outlookBtn = document.createElement('button');
 outlookBtn.textContent = '📨 Informar contenedores ya buscados';
 outlookBtn.className = 'modal-btn btn-outlook';
@@ -355,8 +415,7 @@ copiarBtn.onclick = () => {
     .catch(() => alert('⚠️ No se pudo copiar el texto. Intenta manualmente.'));
 };
 resultadoDiv.appendChild(copiarBtn);
- }
-
+ 
 </script>
 </body>
 
