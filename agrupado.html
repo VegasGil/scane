@@ -5,19 +5,43 @@
   <title>Unificador de DATs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body {
-      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f7f7f7;
+       :root {
+    --rojo: #d32f2f;
+    --gris: #6e6c6c;
+    --gris-claro: #f4f6f8;
+    --blanco: #fff;
+  }
+
+ body{
+      margin:0; padding:0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg,var(--brand-light), #f7f7f7);
+      color:var(--text);
+      min-height:100vh;
+      display:flex; flex-direction:column;
     }
     header {
-      background: #d32f2f;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-      font-weight: bold;
-    }
+    display: flex;
+    align-items: center;
+    background: var(--rojo);
+    padding: 0.8em 1.2em;
+    color: var(--blanco);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+   header .brand a {
+    text-decoration: none;
+    color: var(--blanco);
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+   h1 {
+    text-align: center;
+    color: var(--rojo);
+    margin: 1em 0;
+    font-size: 1.5rem;
+  }
     main {
       max-width: 800px;
       margin: auto;
@@ -46,10 +70,24 @@
     button:hover {
       background: #b71c1c;
     }
+      @media (max-width: 600px) {
+
+            input,
+            button,
+            select {
+                width: 100%;
+                margin: 8px 0;
+            }
+        }
   </style>
 </head>
 <body>
-  <header>📦 Unificador de Archivos DAT</header>
+    <header>
+    <div class="brand">
+      <a href="index.html">ARADOC ARTES</a>
+    </div>
+  </header>
+  <h1>📦 Unificador de Archivos DAT</h1>
   <main>
     <div class="section">
       <h2>📂 Selección individual de archivos DAT</h2>
