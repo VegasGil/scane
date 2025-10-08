@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
-  <title>📦 Filtro de Rutas PDF</title>
+  <title>📦 Comparador de Rutas DAT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     :root {
       --rojo: #d32f2f;
@@ -14,7 +14,8 @@
     }
 
     body {
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
       font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
       background: linear-gradient(180deg, var(--gris-claro), #f7f7f7);
       color: var(--gris);
@@ -49,6 +50,13 @@
       font-size: 1.5rem;
     }
 
+    h2 {
+      text-align: center;
+      margin: 1em 0 0.5em;
+      font-size: 1.2rem;
+      color: var(--gris);
+    }
+
     #controls {
       text-align: center;
       margin-bottom: 1em;
@@ -58,7 +66,11 @@
       gap: 0.5em;
     }
 
-    .btn-file, .action-btn {
+    input[type="file"] {
+      display: none;
+    }
+
+    .btn-file, .paso {
       background: var(--gris);
       color: var(--blanco);
       padding: 0.7em 1em;
@@ -72,12 +84,22 @@
       text-align: center;
     }
 
-    .btn-file:hover, .action-btn:hover {
-      background: #4a4949;
+    .btn-file:hover {
+      background: #635e5e;
     }
 
     .action-btn {
+      font-size: 1em;
+      padding: 0.7em 1em;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      flex: 1 1 45%;
+      max-width: 220px;
       background: var(--rojo);
+      color: var(--blanco);
+      font-weight: bold;
     }
 
     .action-btn:hover {
@@ -86,139 +108,344 @@
 
     #resultado {
       margin: 1em auto;
-      width: 90%;
-      max-width: 800px;
-      background: var(--blanco);
-      padding: 1em 1.5em;
-      border-radius: 10px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
       white-space: pre-wrap;
-      font-size: 0.9rem;
+      background: var(--blanco);
+      padding: 1em;
+      border: 1px solid #ccc;
+      max-height: 400px;
+      overflow-y: auto;
+      width: 90%;
+      border-radius: 6px;
     }
 
-    .ok { color: green; font-weight: bold; }
-    .alerta { color: var(--rojo); font-weight: bold; }
+    .modal-btn {
+      display: block;
+      width: 100%;
+      padding: 0.8em;
+      margin-top: 0.8em;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 1em;
+    }
+
+    .btn-outlook {
+      background: #0078d4;
+      color: var(--blanco);
+    }
+
+    .btn-outlook:hover {
+      background: #005fa3;
+    }
 
     @media (max-width: 600px) {
       #controls {
         flex-direction: column;
         align-items: center;
       }
-      .btn-file, .action-btn {
-        width: 70%;
+
+      .btn-file,
+      .action-btn {
+        flex: 1 1 100%;
         max-width: none;
+        width: 70%;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+      }
+
+      header .brand a {
+        font-size: 1rem;
       }
     }
+  
+  .modal-btn {
+    margin: 10px 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-download {
+    background-color: #4CAF50;
+    color: white;
+  }
+
+  .btn-download:hover {
+    background-color: #45a049;
+  }
+
+  .btn-outlook {
+    background-color: #0078D4;
+    color: white;
+  }
+
+  .btn-outlook:hover {
+    background-color: #005a9e;
+  }
+
+  .btn-copy {
+    background-color: #f0ad4e;
+    color: white;
+  }
+
+  .btn-copy:hover {
+    background-color: #ec971f;
+  }
+
+  pre {
+    background-color: #f9f9f9;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
   </style>
 </head>
+
 <body>
   <header>
     <div class="brand">
-      <a href="#">ARADOC ARTES</a>
+      <a href="index.html">ARADOC ARTES</a>
     </div>
   </header>
 
-  <h1>📦 Filtro de Rutas - Evitar Duplicados</h1>
+  <h1>📦 Comparador de Rutas DAT</h1>
 
+  <h2>Paso 1: Cargar archivos</h2>
   <div id="controls">
-    <label for="archivoRutas" class="btn-file">📂 Cargar Rutas Nuevas (.dat)</label>
-    <input type="file" id="archivoRutas" accept=".dat,.txt" hidden>
+    <label class="btn-file" for="fileHistorico">📁 Confirmada .dat</label>
+    <input type="file" id="fileHistorico" accept=".dat" />
 
-    <label for="archivoConfirmadas" class="btn-file">📂 Cargar Confirmadas (.dat)</label>
-    <input type="file" id="archivoConfirmadas" accept=".dat,.txt" hidden>
+    <label class="btn-file" for="fileActual">📁 Pdf_de_rutas .dat</label>
+    <input type="file" id="fileActual" accept=".dat" />
 
-    <button class="action-btn" id="btnFiltrar">🧮 Filtrar</button>
+    <button class="action-btn" onclick="comparar()">🔍 Comparar y filtrar</button>
+    <a class="paso" href="consulta.html">Paso 3</a>   
   </div>
 
-  <div id="resultado">🕓 Esperando archivos...</div>
-<!-- Agrega esto dentro del <head> -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <div id="resultado"></div>
+
 
   <script>
-    let rutasNuevas = [];
-    let rutasConfirmadas = [];
+let historico = [];
+let actual = [];
 
-    // Leer archivo .dat y extraer contenedores
-    function leerArchivo(file, tipo) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const texto = reader.result;
-          const regex = /Contenedor:\s*(\d+)/g;
-          const contenedores = [];
-          let match;
-          while ((match = regex.exec(texto)) !== null) {
-            contenedores.push(match[1]);
-          }
-          resolve(contenedores);
-        };
-        reader.readAsText(file, "UTF-8");
-      });
-    }
+function parsearBloques(texto) {
+  return texto.split(/\n{2,}/).map(b => b.trim()).filter(b => b.startsWith('Contenedor:'));
+}
 
-    // Manejar selección de archivos
-    document.getElementById("archivoRutas").addEventListener("change", async (e) => {
-      rutasNuevas = await leerArchivo(e.target.files[0], "rutas");
-      document.querySelector('label[for="archivoRutas"]').textContent = `✅ Rutas cargadas (${rutasNuevas.length})`;
-    });
+function extraerContenedor(bloque) {
+  const match = bloque.match(/Contenedor:\s*(\d+)/);
+  return match ? match[1] : null;
+}
 
-    document.getElementById("archivoConfirmadas").addEventListener("change", async (e) => {
-      rutasConfirmadas = await leerArchivo(e.target.files[0], "confirmadas");
-      document.querySelector('label[for="archivoConfirmadas"]').textContent = `✅ Confirmadas cargadas (${rutasConfirmadas.length})`;
-    });
-
-    // Filtrar duplicados
-   document.getElementById("btnFiltrar").addEventListener("click", async () => {
-  const resultadoDiv = document.getElementById("resultado");
-
-  if (!rutasNuevas.length || !rutasConfirmadas.length) {
-    resultadoDiv.innerHTML = "⚠️ Carga ambos archivos (.dat) antes de filtrar.";
-    return;
-  }
-
-  const setConfirmadas = new Set(rutasConfirmadas);
-  const pendientes = rutasNuevas.filter(c => !setConfirmadas.has(c));
-
-  let resultado = `📋 Resultado del filtrado\n\n`;
-  resultado += `🔹 Total Rutas Nuevas: ${rutasNuevas.length}\n`;
-  resultado += `🔹 Total Confirmadas: ${rutasConfirmadas.length}\n`;
-  resultado += `✅ Pendientes reales: ${pendientes.length}\n\n`;
-
-  if (pendientes.length > 0) {
-    resultado += pendientes.map(c => `Contenedor: ${c}`).join("\n");
-  } else {
-    resultado += "🎉 No hay rutas pendientes, todo procesado.";
-  }
-
-  resultadoDiv.innerHTML = `<pre>${resultado}</pre>`;
-
-  if (pendientes.length > 0) {
-    // Generar PDF usando jsPDF
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(12);
-    doc.text("Rutas Pendientes Reales", 10, 10);
-
-    pendientes.forEach((c, index) => {
-      doc.text(`${index + 1}. Contenedor: ${c}`, 10, 20 + index * 10);
-    });
-
-    // Nombre de archivo con fecha
-    const fecha = new Date();
-    const yyyy = fecha.getFullYear();
-    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
-    const dd = String(fecha.getDate()).padStart(2, '0');
-    const nombreArchivo = `rutas_pendientes_${yyyy}-${mm}-${dd}.pdf`;
-
-    // Descargar PDF
-    doc.save(nombreArchivo);
-
-    // Abrir mailto con aviso
-    const mailtoLink = `mailto:rippermanresa@gmail.com,vegasfalexis@gmail.com?subject=Rutas filtradas&body=Adjunto archivo generado: ${nombreArchivo}`;
-    window.location.href = mailtoLink;
+// Cargar archivos
+document.getElementById('fileHistorico').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const texto = await file.text();
+    historico = parsearBloques(texto);
   }
 });
 
-  </script>
+document.getElementById('fileActual').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const texto = await file.text();
+    actual = parsearBloques(texto);
+  }
+});
+
+function comparar() {
+  if (!historico.length || !actual.length) {
+    alert('⚠️ Carga ambos archivos antes de comparar.');
+    return;
+  }
+
+  // Contenedores del histórico
+  const contHistorico = new Set(historico.map(b => extraerContenedor(b)));
+
+  // Pendientes reales: no están en histórico
+  const pendientes = actual.filter(b => !contHistorico.has(extraerContenedor(b)));
+
+  // Ya procesados: están en histórico
+  const yaProcesados = actual.filter(b => contHistorico.has(extraerContenedor(b)));
+
+  // No localizadas: solo los ❌ del histórico
+  const noLocalizadas = historico.filter(b => b.includes('❌ No localizada'));
+
+  const resultadoDiv = document.getElementById('resultado');
+  resultadoDiv.innerHTML = '';
+
+  // 1️⃣ Resumen
+  const resumen = document.createElement('div');
+  resumen.textContent = `✅ Pendientes reales: ${pendientes.length} | 🟡 Ya procesadas: ${yaProcesados.length} | ❌ No localizadas: ${noLocalizadas.length}`;
+  resumen.style.fontWeight = 'bold';
+  resumen.style.marginBottom = '1em';
+  resultadoDiv.appendChild(resumen);
+
+  // 2️⃣ Mostrar pendientes y descargar
+  if (pendientes.length) {
+    const pre = document.createElement('pre');
+    pre.textContent = pendientes.join('\n\n');
+    resultadoDiv.appendChild(pre);
+
+    const blob = new Blob([pendientes.join('\n\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = 'ruta_pendientes.dat';
+    enlace.textContent = '⬇️ Descargar ruta pendiente';
+    enlace.className = 'modal-btn btn-download';
+    resultadoDiv.appendChild(enlace);
+  }
+
+  // 3️⃣ Correo con ❌ no localizadas
+ if (noLocalizadas.length) {
+  const textoCorreo = noLocalizadas.map(b => {
+  const limpio = b.replace(/\s+/g, ' ').trim();
+
+  const cont = limpio.match(/Contenedor:\s*(\d+)/)?.[1] || '';
+  const arxiu = limpio.match(/Arxiu:\s*(.+?)(?=\s+Tipus:|$)/)?.[1] || '';
+  const fecha = limpio.match(/\d{2}\/\d{2}\/\d{4}/)?.[0] || '';
+  const client = limpio.match(/Client:\s*(.+?)(?=\s+Consulta:|$)/)?.[1] || '';
+  const consulta = limpio.match(/Consulta:\s*(\d+)/)?.[1] || '';
+  const servei = limpio.match(/Servei:\s*(\S+)/)?.[1] || '';
+  const tipus = limpio.match(/Tipus:\s*(\S+)/)?.[1] || '';
+  const deposito = limpio.match(/Dipòsit:\s*(\d+)/)?.[1] || '';
+  const piso = limpio.match(/Pis:\s*(\d+)/)?.[1] || '';
+  const carrer = limpio.match(/Carrer:\s*(\d+)/)?.[1] || '';
+  const columna = limpio.match(/Columna:\s*(\d+)/)?.[1] || '';
+  const nivell = limpio.match(/Nivell:\s*(\d+)/)?.[1] || '';
+  const serie = limpio.match(/Serie:\s*(\d+)/)?.[1] || '';
+
+  return `Contenedor: ${cont}
+Arxiu: ${arxiu}
+Fecha: ${fecha}
+Client: ${client}
+Consulta: ${consulta}
+Servei: ${servei}
+Tipus: ${tipus}
+Depósito: ${deposito}
+Pis: ${piso}
+Carrer: ${carrer}
+Columna: ${columna}
+Nivell: ${nivell}
+Serie: ${serie}`;
+}).join('\n----------------\n');
+
+  const cuerpoFinal = `${textoCorreo}\n\nDevolución:`;
+  const mailtoLink = `mailto:fernando@aradoc.cat?subject=Rutas filtradas&body=${encodeURIComponent(cuerpoFinal)}`;
+
+  // Puedes abrir el correo automáticamente si lo deseas:
+  window.location.href = mailtoLink;
+}
+
+    const btnMail = document.createElement('button');
+    btnMail.textContent = '📨 Enviar correo con no localizadas';
+    btnMail.className = 'modal-btn btn-outlook';
+    btnMail.onclick = () => window.location.href = mailtoLink;
+    resultadoDiv.appendChild(btnMail);
+
+    // Botón copiar al portapapeles
+    const copiarBtn = document.createElement('button');
+    copiarBtn.textContent = '📋 Copiar texto para correo';
+    copiarBtn.className = 'modal-btn btn-copy';
+    copiarBtn.onclick = () => navigator.clipboard.writeText(textoCorreo);
+    resultadoDiv.appendChild(copiarBtn);
+  }
+
+
+
+
+  // Mostrar resumen
+  const resumen = document.createElement('div');
+  resumen.textContent = `✅ Ruta nueva con ${nuevos.length} contenedores. 📩 ${yaBuscados.length} ya fueron buscados y no localizados.`;
+  resumen.style.fontWeight = 'bold';
+  resumen.style.marginBottom = '1em';
+  resultadoDiv.appendChild(resumen);
+
+  // Mostrar ruta nueva
+  const contenidoFinal = nuevos.join('\n\n');
+  const pre = document.createElement('pre');
+  pre.textContent = contenidoFinal;
+  resultadoDiv.appendChild(pre);
+
+  // Descargar ruta nueva
+ // Descargar ruta nueva
+const blob = new Blob([contenidoFinal], { type: 'text/plain' });
+const url = URL.createObjectURL(blob);
+const enlace = document.createElement('a');
+enlace.href = url;
+enlace.download = 'ruta_nueva.dat';
+enlace.textContent = '⬇️ Descargar ruta nueva';
+enlace.className = 'modal-btn btn-download';
+resultadoDiv.appendChild(enlace);
+
+// Crear botón para enviar por correo
+const nombreArchivo = 'ruta_nueva.dat';
+mailtoLink = `mailto:rippermanresa@gmail.com,vegasfalexis@gmail.com?subject=Rutas filtradas&body=${encodeURIComponent(
+  `Adjunto archivo generado: ${nombreArchivo}\n\nPor favor, revisa las rutas pendientes.`
+)}`;
+
+const btnMail = document.createElement('button');
+btnMail.textContent = '📨 Enviar por correo';
+btnMail.className = 'modal-btn btn-outlook';
+btnMail.onclick = () => window.location.href = mailtoLink;
+resultadoDiv.appendChild(btnMail);
+
+
+  // Construir bloques de texto para correo
+  const bloquesCorreo = yaBuscados.map(b => {
+    const contenedor = extraerContenedor(b);
+    const arxiu = (b.match(/Arxiu:\s*(.+)/) || [])[1]?.trim() || 'Sin dato';
+    const fecha = (b.match(/\d{2}\/\d{2}\/\d{4}/) || [])[0] || 'Sin fecha';
+    return [
+      `Contenedor: ${contenedor} |`,
+      `Arxiu: ${arxiu} |`,
+      `Ya buscado el ${fecha}`,
+      `Devolucion:`,
+      `____________________________________`
+    ].join('\n');
+  });
+
+  const textoCorreo = [
+    'Buen día, consultas buscadas:',
+    '',
+    ...bloquesCorreo,
+    '',
+    'Saludos.'
+  ].join('\n');
+
+  // Botón para enviar por Outlook
+const mailtoLink = `mailto:fernando@aradoc.cat?subject=Rutas filtradas&body=${encodeURIComponent(textoCorreo)}`;
+
+const outlookBtn = document.createElement('button');
+outlookBtn.textContent = '📨 Informar contenedores ya buscados';
+outlookBtn.className = 'modal-btn btn-outlook';
+outlookBtn.onclick = () => window.location.href = mailtoLink;
+resultadoDiv.appendChild(outlookBtn);
+
+// Botón para copiar al portapapeles
+const copiarBtn = document.createElement('button');
+copiarBtn.textContent = '📋 Copiar texto para correo';
+copiarBtn.className = 'modal-btn btn-copy';
+copiarBtn.onclick = () => {
+  navigator.clipboard.writeText(textoCorreo)
+    .then(() => alert('✅ Texto copiado al portapapeles. Puedes pegarlo en tu correo.'))
+    .catch(() => alert('⚠️ No se pudo copiar el texto. Intenta manualmente.'));
+};
+resultadoDiv.appendChild(copiarBtn);
+ 
+</script>
 </body>
+
 </html>

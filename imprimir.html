@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Visor de Rutas .DAT con Código de Barras</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 2rem;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    input[type="file"] {
+      display: block;
+      margin: 0 auto 2rem auto;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .ruta {
+      background: #fff;
+      border-left: 6px solid #d33;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .ruta strong {
+      color: #444;
+    }
+
+    .barcode {
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    svg {
+      margin-top: 0.5rem;
+    }
+
+    /* --- ESTILO DE IMPRESIÓN --- */
+    @media print {
+      body {
+        background: white;
+        margin: 0;
+        padding: 1cm;
+      }
+
+      input, button, h1 {
+        display: none; /* no mostrar botones ni título */
+      }
+
+      .ruta {
+        width: 100%;
+        box-shadow: none;
+        border: 1px solid #aaa;
+        margin-bottom: 1cm;
+        padding: 1cm;
+      }
+
+      /* 3 rutas por hoja aproximadamente */
+      .ruta {
+        height: calc((100vh - 4cm) / 3);
+        overflow: hidden;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 1cm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>📦 Visor de Rutas desde DAT</h1>
+  <input type="file" id="fileInput" accept=".dat" />
+  <button onclick="window.print()">🖨️ Imprimir</button>
+  
+  <div id="output"></div>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const text = await file.text();
+      const bloques = text.split(/\n{2,}/).map(b => b.trim()).filter(b => b.includes('Contenedor:'));
+
+      const output = document.getElementById('output');
+      output.innerHTML = '';
+
+      bloques.forEach((b, index) => {
+        const limpio = b.replace(/\s+/g, ' ').trim();
+
+        const cliente = limpio.match(/Cliente:\s*(.+?)(?=\s+Fecha:|$)/)?.[1] || '';
+        const fecha = limpio.match(/Fecha:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1] || '';
+        const consulta = limpio.match(/Consulta:\s*(\d+)/)?.[1] || '';
+        const servei = limpio.match(/Servei:\s*(\S+)/)?.[1] || '';
+        const arxiu = limpio.match(/Arxiu:\s*(.+?)(?=\s+Tipus:|$)/)?.[1] || '';
+        const tipus = limpio.match(/Tipus:\s*(\S+)/)?.[1] || '';
+        const deposito = limpio.match(/Depósito:\s*(\d+)/)?.[1] || '';
+        const piso = limpio.match(/Pis:\s*(\d+)/)?.[1] || '';
+        const carrer = limpio.match(/Carrer:\s*(\d+)/)?.[1] || '';
+        const columna = limpio.match(/Columna:\s*(\d+)/)?.[1] || '';
+        const nivell = limpio.match(/Nivell:\s*(\d+)/)?.[1] || '';
+        const serie = limpio.match(/Serie:\s*(\d+)/)?.[1] || '';
+        const contenedor = limpio.match(/Contenedor:\s*(\d+)/)?.[1] || '';
+        const origen = limpio.match(/Origen:\s*(\S+)/)?.[1] || 'undefined';
+
+        const barcodeId = `barcode-${index}`;
+
+        const bloqueHTML = `
+          <div class="ruta">
+            <strong>Cliente:</strong> ${cliente}<br>
+            <strong>Fecha:</strong> ${fecha}<br>
+            <strong>Consulta:</strong> ${consulta}<br>
+            <strong>Servei:</strong> ${servei}<br>
+            <strong>Arxiu:</strong> ${arxiu}<br>
+            <strong>Tipus:</strong> ${tipus}<br>
+            <strong>Depósito:</strong> ${deposito} | <strong>Pis:</strong> ${piso}<br>
+            <strong>Carrer:</strong> ${carrer} | <strong>Columna:</strong> ${columna} | <strong>Nivell:</strong> ${nivell}<br>
+            <strong>Serie:</strong> ${serie} | <strong>Contenedor:</strong> ${contenedor}<br>
+            <strong>Origen:</strong> ${origen}<br>
+            <div class="barcode">
+              <svg id="${barcodeId}"></svg>
+            </div>
+          </div>
+        `;
+        output.innerHTML += bloqueHTML;
+
+        // Generar código de barras con JsBarcode
+        JsBarcode(`#${barcodeId}`, `A${contenedor || index}`, {
+          format: "CODE128",
+          lineColor: "#000",
+          width: 2,
+          height: 60,
+          displayValue: true
+        });
+      });
+    });
+  </script>
+</body>
+</html>

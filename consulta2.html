@@ -98,7 +98,7 @@
       <div id="controls">
         <div class="file-wrap">
           <label class="file-label" for="fileInput">📁 Seleccionar archivo .dat</label>
-          <input id="fileInput" type="file" accept=".dat" />
+          <input id="fileInput" type="file" accept=".dat,.pdf" multiple />
         </div>
 
         <div class="controls-row">
@@ -111,6 +111,7 @@
     </div>
 
     <div id="confirmadas" aria-live="polite"></div>
+    <div id="resumen" style="margin-top:2rem; font-weight:600;"></div>
   </main>
 
   <div id="modal" aria-hidden="true">
@@ -118,8 +119,9 @@
   </div>
 
   <footer>© 2025 ARADOC ARTES — Colores corporativos: rojo · gris · blanco</footer>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
   <script>
+     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
     // Variables globales (se mantienen entre recargas si lo deseas)
     let rutas = [];
     let rutasFiltradas = [];
@@ -127,64 +129,227 @@
     let depositosSeleccionados = [];
     let actualIndex = 0;
 
-    // File input handling (hacemos click en la etiqueta para que funcione bonito)
-    const fileInput = document.getElementById('fileInput');
-    const fileLabel = document.querySelector('.file-label');
-   
+    function filtrarPorDeposito(rutas, permitidos = ['45', '46', '47', '48', '49']) {
+  const permitidas = [];
+  const sinDeposito = [];
 
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+  rutas.forEach(r => {
+    const deposito = r.deposito?.trim() || '';
+    if (permitidos.includes(deposito)) {
+      permitidas.push(r);
+    } else if (deposito === '' || deposito === '0') {
+      sinDeposito.push(r);
+    }
+  });
+
+  return { permitidas, sinDeposito };
+}
+function analizarRutasDesdePDF(texto) {
+  const rutasPDF = [];
+
+  // 💡 Normalizamos espacios y convertimos todo a una sola línea
+  const limpio = texto.replace(/\s+/g, ' ').trim();
+
+  // 💡 Extraemos cada bloque que empiece con "Client:" y termine antes del siguiente "Client:" o el final
+  const bloques = limpio.split(/(?=Client:)/g);
+
+  bloques.forEach(b => {
+    const client = b.match(/Client:\s*([\d\s\/]+)/)?.[1]?.trim() || '';
+    const arxiu = b.match(/Arxiu:\s*(.+?)(?=\s+Tipus:|$)/)?.[1]?.trim() || '';
+    const deposito = b.match(/Dipòsit:\s*(\d+)/)?.[1] || '';
+    const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
+    const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
+    const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
+    const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
+    const contenedor = b.match(/Contenidor:\s*(\d+)/)?.[1] || '';
+    const fecha = b.match(/Data:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1] || '';
+
+    if (contenedor && deposito) {
+      rutasPDF.push({
+        contenedor,
+        arxiu,
+        deposito,
+        piso,
+        carrer,
+        columna,
+        nivell,
+        client,
+        fecha,
+        origen: 'PDF'
+      });
+    }
+  });
+
+  return rutasPDF;
+}
+
+
+  
+// File input handling (hacemos click en la etiqueta para que funcione bonito)
+const fileInput = document.getElementById('fileInput');
+const fileLabel = document.querySelector('.file-label');
+
+fileInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+
+  rutas = [];
+  rutasSinDeposito = [];
+
+  for (const file of files) {
+    const extension = file.name.split('.').pop().toLowerCase();
+    console.log("📂 Archivo seleccionado:", file.name);
+
+    if (extension === 'dat') {
       const text = await file.text();
-      rutas = parsearRutas(text);
-      const depositosValidos = ['45','46','47','48','49'];
-      const depositosEncontrados = [...new Set(rutas.map(r => r.deposito).filter(d => depositosValidos.includes(d)))].sort((a,b) => b - a);
-      if (depositosEncontrados.length === 0) {
-        alert('No se han encontrado depósitos válidos en el archivo.');
-        return;
+      const rutasDAT = parsearRutas(text);
+      const { permitidas, sinDeposito } = filtrarPorDeposito(rutasDAT);
+      rutas.push(...permitidas);
+      rutasSinDeposito.push(...sinDeposito);
+      console.log("✅ Archivo DAT cargado:", file.name);
+    }
+
+    else if (extension === 'pdf') {
+      try {
+        const reader = new FileReader();
+        reader.onload = async function () {
+          const typedarray = new Uint8Array(this.result);
+          try {
+            const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
+            let textoExtraido = [];
+            for (let i = 1; i <= doc.numPages; i++) {
+              const page = await doc.getPage(i);
+              const content = await page.getTextContent();
+              const strings = content.items.map(item => item.str).join(' ');
+              textoExtraido.push(strings);
+            }
+            const texto = textoExtraido.join('\n\n');
+            console.log("📄 Texto extraído del PDF:\n", texto);
+
+            const rutasPDF = analizarRutasDesdePDF(texto);
+            const { permitidas, sinDeposito } = filtrarPorDeposito(rutasPDF);
+            rutas.push(...permitidas);
+            rutasSinDeposito.push(...sinDeposito);
+            console.log("✅ Archivo PDF cargado:", file.name);
+          } catch (err) {
+            console.error(`❌ Error al procesar ${file.name}:`, err);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (err) {
+        console.error(`❌ Error al leer ${file.name}:`, err);
       }
-      mostrarModalSeleccion(depositosEncontrados);
-    });
-console.log("Archivo cargado:", file.name);
-console.log("Contenido leído:", text.slice(0, 500)); // primeros 500 caracteres
-console.log("Rutas detectadas:", rutas);
-    function parsearRutas(texto) {
-      const bloques = texto.split(/\n{2,}/);
-      const rutas = [];
-      bloques.forEach(b => {
-        const cont = b.match(/Contenedor:\s*(\d+)/)?.[1] || '';
-        const arxiu = b.match(/Arxiu:\s*(.+)/)?.[1] || '';
-        const deposito = b.match(/Depósito:\s*(\d+)/)?.[1] || '';
-        const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
-        const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
-        const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
-        const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
-        const fecha = b.match(/\d{2}\/\d{2}\/\d{4}/)?.[0] || '';
-        if (cont && deposito) rutas.push({ contenedor: cont, arxiu, deposito, piso, carrer, columna, nivell, fecha });
-      });
-      return rutas;
     }
 
-    function mostrarModalSeleccion(depositos) {
-      const modal = document.getElementById('modal');
-      const content = document.getElementById('modalContent');
-      depositosSeleccionados = [];
-
-      let html = `<h2>Selecciona depósitos a revisar</h2>`;
-      html += `<div class="deposit-list">`;
-      depositos.forEach(d => {
-        html += `<button class="deposit-btn" onclick="toggleDeposito('${d}', this)">Depósito ${d}</button>`;
-      });
-      html += `</div>`;
-      html += `<div style="margin-top:1rem; display:flex; gap:0.6rem;">
-                <button class="btn btn-primary" style="flex:1" onclick="confirmarSeleccion()">Comenzar revisión</button>
-                <button class="btn btn-secondary" style="flex:1" onclick="cerrarModal()">Cancelar</button>
-               </div>`;
-
-      content.innerHTML = html;
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden','false');
+    else {
+      alert(`⚠️ Archivo no permitido: ${file.name}`);
     }
+  }
+
+  setTimeout(() => {
+    if (rutas.length === 0) {
+      alert('⚠️ No se han encontrado depósitos válidos en los archivos cargados.');
+      return;
+    }
+    const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
+    mostrarModalSeleccion(depositosEncontrados);
+    console.log("📦 Total rutas detectadas:", rutas);
+    fileInput.value = '';
+  }, 1000);
+});
+
+  rutas = [];
+  rutasSinDeposito = [];
+
+  // Procesar cada archivo seleccionado
+  for (const file of files) {
+    const extension = file.name.split('.').pop().toLowerCase();
+
+    if (extension === 'dat') {
+      const text = await file.text();
+      const rutasDAT = parsearRutas(text);
+      const { permitidas, sinDeposito } = filtrarPorDeposito(rutasDAT);
+      rutas.push(...permitidas);
+      rutasSinDeposito.push(...sinDeposito);
+      console.log("✅ Archivo DAT cargado:", file.name);
+    }
+
+    else if (extension === 'pdf') {
+      try {
+        const reader = new FileReader();
+        reader.onload = async function () {
+          const typedarray = new Uint8Array(this.result);
+          try {
+            const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
+            let textoExtraido = [];
+            for (let i = 1; i <= doc.numPages; i++) {
+              const page = await doc.getPage(i);
+              const content = await page.getTextContent();
+              const strings = content.items.map(item => item.str).join(' ');
+              textoExtraido.push(strings);
+            }
+            const texto = textoExtraido.join('\n\n');
+            console.log("📄 Texto extraído del PDF:\n", texto);
+
+            const rutasPDF = analizarRutasDesdePDF(texto);
+            const { permitidas, sinDeposito } = filtrarPorDeposito(rutasPDF);
+            rutas.push(...permitidas);
+            rutasSinDeposito.push(...sinDeposito);
+            console.log("✅ Archivo PDF cargado:", file.name);
+          } catch (err) {
+            console.error(`❌ Error al procesar ${file.name}:`, err);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (err) {
+        console.error(`❌ Error al leer ${file.name}:`, err);
+      }
+    }
+
+    else {
+      alert(`⚠️ Archivo no permitido: ${file.name}`);
+    }
+  } // fin del for
+
+  // Esperamos un poco para que terminen los FileReaders de PDF
+  setTimeout(() => {
+    if (rutas.length === 0) {
+      alert('⚠️ No se han encontrado depósitos válidos en los archivos cargados.');
+      return;
+    }
+    const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
+    mostrarModalSeleccion(depositosEncontrados);
+    console.log("📦 Total rutas detectadas:", rutas);
+     // ✅ Evita que el input vuelva a abrirse automáticamente o se dispare dos veces
+  fileInput.value = '';
+  }, 1000);
+});
+
+// Mostrar modal de selección
+function mostrarModalSeleccion(depositos) {
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+  depositosSeleccionados = [];
+
+  let html = `<h2>Selecciona depósitos a revisar</h2>`;
+  html += `<div class="deposit-list">`;
+  depositos.forEach(d => {
+    html += `<button class="deposit-btn" onclick="toggleDeposito('${d}', this)">Depósito ${d}</button>`;
+  });
+  html += `</div>`;
+
+  html += `<div style="margin-top:1rem; display:flex; gap:0.6rem;">
+    <button class="btn btn-primary" style="flex:1" onclick="confirmarSeleccion()">Comenzar revisión</button>
+    <button class="btn btn-secondary" style="flex:1" onclick="cerrarModal()">Cancelar</button>
+  </div>`;
+
+  content.innerHTML = html;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden','false');
+}
+
+// Permite hacer click en la etiqueta para abrir el selector
+// fileLabel.addEventListener('click', () => fileInput.click());
 
     function toggleDeposito(valor, boton) {
       const index = depositosSeleccionados.indexOf(valor);
@@ -196,7 +361,49 @@ console.log("Rutas detectadas:", rutas);
         boton.classList.remove('active');
       }
     }
+function parsearRutas(texto) {
+  const bloques = texto.split(/\n{2,}/);
+  const rutas = [];
 
+  bloques.forEach(b => {
+    const client = b.match(/Client:\s*(.+)/)?.[1]?.trim() || '';
+    const fecha = b.match(/Data:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1] || '';
+    const consulta = b.match(/Consulta:\s*(\d+)/)?.[1] || '';
+    const servei = b.match(/Servei:\s*(\S+)/)?.[1] || '';
+    const arxiu = b.match(/Arxiu:\s*(.+)/)?.[1]?.trim() || '';
+    const tipus = b.match(/Tipus:\s*(\S+)/)?.[1] || '';
+    const deposito = b.match(/Dipòsit:\s*(\d+)/)?.[1] || '';
+    const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
+    const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
+    const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
+    const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
+    const serie = b.match(/Serie:\s*(\d+)/)?.[1] || '';
+    const contenedor = b.match(/Contenidor:\s*(\d+)/)?.[1] || '';
+    const codigoBarras = b.match(/\b\d{8}\b/)?.[0] || '';
+
+    if (contenedor && deposito) {
+      rutas.push({
+        client,
+        fecha,
+        consulta,
+        servei,
+        arxiu,
+        tipus,
+        deposito,
+        piso,
+        carrer,
+        columna,
+        nivell,
+        serie,
+        contenedor,
+        codigoBarras,
+        origen: 'DAT' // ✅ origen marcado
+      });
+    }
+  });
+
+  return rutas;
+}
   function confirmarSeleccion() {
   if (depositosSeleccionados.length === 0) {
     alert('⚠️ Selecciona al menos un depósito para continuar.');
@@ -274,12 +481,13 @@ console.log("Rutas detectadas:", rutas);
       const div = document.createElement('div');
       div.className = 'confirmada ' + (encontrada ? 'encontrada' : 'no-encontrada');
       div.innerHTML = `
-        <strong>Contenedor:</strong> ${ruta.contenedor}<br>
-        <strong>Arxiu:</strong> ${ruta.arxiu}<br>
-        <strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}<br>
-        <strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}<br>
-        <strong>Estado:</strong> ${ruta.estado}
-      `;
+  <strong>Contenedor:</strong> ${ruta.contenedor}<br>
+  <strong>Arxiu:</strong> ${ruta.arxiu}<br>
+  <strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}<br>
+  <strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}<br>
+  <strong>Estado:</strong> ${ruta.estado}<br>
+  <strong>Origen:</strong> ${ruta.origen}
+`;
       document.getElementById('confirmadas').appendChild(div);
 
       actualIndex++;
@@ -407,6 +615,7 @@ console.log(resultadoFiltrado);
       const modal = document.getElementById('modal');
       modal.style.display = 'none';
       modal.setAttribute('aria-hidden','true');
+       document.body.focus();
     }
 
     // Mantener comportamiento de 'abrir input tras recarga' si se usó antes
@@ -421,9 +630,7 @@ console.log(resultadoFiltrado);
       }
 
       // Permitir cerrar modal al hacer click fuera del contenido
-      document.getElementById('modal').addEventListener('click', (e) => {
-        if (e.target.id === 'modal') cerrarModal();
-      });
+      
     });
   </script>
 </body>
