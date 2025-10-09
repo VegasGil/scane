@@ -117,163 +117,103 @@
   <div id="modal" aria-hidden="true">
     <div id="modalContent"></div>
   </div>
+<button class="btn btn-primary" onclick="iniciarRevision()">📦 Iniciar revisión</button>
 
   <footer>© 2025 ARADOC ARTES — Colores corporativos: rojo · gris · blanco</footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
   <script>
-     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-    // Variables globales (se mantienen entre recargas si lo deseas)
-    let rutas = [];
-    let rutasFiltradas = [];
-    let rutasConfirmadas = [];
-    let depositosSeleccionados = [];
-    let actualIndex = 0;
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-    function filtrarPorDeposito(rutas, permitidos = ['45', '46', '47', '48', '49']) {
+// ===== ESTADO GLOBAL =====
+let rutas = [];              
+let rutasFiltradas = [];     
+let rutasConfirmadas = [];   
+let depositosSeleccionados = [];
+let actualIndex = 0;
+
+// ===== PARSEAR BLOQUES =====
+function parsearRutas(texto, origen = 'DAT') {
+  const clean = (texto || '').replace(/\r/g, '');
+  const bloques = clean.split(/-{3,}|\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  const salida = [];
+
+  for (const b of bloques) {
+    const fields = {};
+    const pairRe = /([^\n:|]+):\s*([^|\n\r]+)/g;
+    let m;
+    while ((m = pairRe.exec(b)) !== null) {
+      const key = m[1].trim();
+      const val = m[2].trim();
+      fields[key] = val;
+    }
+
+    if (!Object.values(fields).some(v => /\d{2}\/\d{2}\/\d{4}/.test(v))) {
+      const dateMatch = b.match(/\d{2}\/\d{2}\/\d{4}/);
+      if (dateMatch) fields['Data'] = dateMatch[0];
+    }
+
+    const map = {};
+    for (const k in fields) {
+      const kn = k.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '');
+      map[kn] = fields[k];
+    }
+
+    const get = (...variants) => {
+      for (let v of variants) {
+        const vn = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '');
+        if (map[vn] !== undefined) return map[vn];
+      }
+      return '';
+    };
+
+    const contenedor = get('contenidor','contendor','contenedor'); 
+    const arxiu = get('arxiu','archivo'); 
+    const deposito = get('diposit','dipòsit','deposit','deposito'); 
+    const piso = get('pis','piso');
+    const carrer = get('carrer','carrer','carrera','calle');
+    const columna = get('columna'); 
+    const nivell = get('nivell','nivel');
+    const client = get('client','cliente');
+    const fecha = get('data','fecha') || '';
+    const codigoBarras = get('codigobarras','codbarras','codigo','codigo barras');
+
+    if (contenedor) {
+      salida.push({
+        contenedor, arxiu, deposito, piso, carrer, columna, nivell,
+        client, fecha, codigoBarras, origen, Estado: ''
+      });
+    }
+  }
+
+  return salida;
+}
+
+// ===== FILTRAR POR DEPÓSITO =====
+function filtrarPorDeposito(rutas, permitidos = ['45','46','47','48','49']) {
   const permitidas = [];
   const sinDeposito = [];
 
   rutas.forEach(r => {
-    const deposito = r.deposito?.trim() || '';
-    if (permitidos.includes(deposito)) {
-      permitidas.push(r);
-    } else if (deposito === '' || deposito === '0') {
-      sinDeposito.push(r);
-    }
+    const dep = r.deposito?.trim() || '';
+    if (permitidos.includes(dep)) permitidas.push(r);
+    else if (dep === '' || dep === '0') sinDeposito.push(r);
   });
 
   return { permitidas, sinDeposito };
 }
-function analizarRutasDesdePDF(texto) {
-  const rutasPDF = [];
 
-  // 💡 Normalizamos espacios y convertimos todo a una sola línea
-  const limpio = texto.replace(/\s+/g, ' ').trim();
-
-  // 💡 Extraemos cada bloque que empiece con "Client:" y termine antes del siguiente "Client:" o el final
-  const bloques = limpio.split(/(?=Client:)/g);
-
-  bloques.forEach(b => {
-    const client = b.match(/Client:\s*([\d\s\/]+)/)?.[1]?.trim() || '';
-    const arxiu = b.match(/Arxiu:\s*(.+?)(?=\s+Tipus:|$)/)?.[1]?.trim() || '';
-    const deposito = b.match(/Dipòsit:\s*(\d+)/)?.[1] || '';
-    const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
-    const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
-    const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
-    const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
-    const contenedor = b.match(/Contenidor:\s*(\d+)/)?.[1] || '';
-    const fecha = b.match(/Data:\s*(\d{2}\/\d{2}\/\d{4})/)?.[1] || '';
-
-    if (contenedor && deposito) {
-      rutasPDF.push({
-        contenedor,
-        arxiu,
-        deposito,
-        piso,
-        carrer,
-        columna,
-        nivell,
-        client,
-        fecha,
-        origen: 'PDF'
-      });
-    }
-  });
-
-  return rutasPDF;
-}
-
-
-  
-// File input handling (hacemos click en la etiqueta para que funcione bonito)
-const fileInput = document.getElementById('fileInput');
-const fileLabel = document.querySelector('.file-label');
-
-fileInput.addEventListener('change', async (e) => {
-  const files = Array.from(e.target.files);
-  if (files.length === 0) return;
-
-  rutas = [];
-  rutasSinDeposito = [];
-
-  // Procesar cada archivo seleccionado
-  for (const file of files) {
-    const extension = file.name.split('.').pop().toLowerCase();
-
-    if (extension === 'dat') {
-      const text = await file.text();
-      const rutasDAT = parsearRutas(text);
-      const { permitidas, sinDeposito } = filtrarPorDeposito(rutasDAT);
-      rutas.push(...permitidas);
-      rutasSinDeposito.push(...sinDeposito);
-      console.log("✅ Archivo DAT cargado:", file.name);
-    }
-
-    else if (extension === 'pdf') {
-      try {
-        const reader = new FileReader();
-        reader.onload = async function () {
-          const typedarray = new Uint8Array(this.result);
-          try {
-            const doc = await pdfjsLib.getDocument({ data: typedarray }).promise;
-            let textoExtraido = [];
-            for (let i = 1; i <= doc.numPages; i++) {
-              const page = await doc.getPage(i);
-              const content = await page.getTextContent();
-              const strings = content.items.map(item => item.str).join(' ');
-              textoExtraido.push(strings);
-            }
-            const texto = textoExtraido.join('\n\n');
-            console.log("📄 Texto extraído del PDF:\n", texto);
-
-            const rutasPDF = analizarRutasDesdePDF(texto);
-            const { permitidas, sinDeposito } = filtrarPorDeposito(rutasPDF);
-            rutas.push(...permitidas);
-            rutasSinDeposito.push(...sinDeposito);
-            console.log("✅ Archivo PDF cargado:", file.name);
-          } catch (err) {
-            console.error(`❌ Error al procesar ${file.name}:`, err);
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      } catch (err) {
-        console.error(`❌ Error al leer ${file.name}:`, err);
-      }
-    }
-
-    else {
-      alert(`⚠️ Archivo no permitido: ${file.name}`);
-    }
-  } // fin del for
-
-  // Esperamos un poco para que terminen los FileReaders de PDF
-  setTimeout(() => {
-    if (rutas.length === 0) {
-      alert('⚠️ No se han encontrado depósitos válidos en los archivos cargados.');
-      return;
-    }
-    const depositosEncontrados = [...new Set(rutas.map(r => r.deposito))].sort((a,b) => b - a);
-    mostrarModalSeleccion(depositosEncontrados);
-    console.log("📦 Total rutas detectadas:", rutas);
-     // ✅ Evita que el input vuelva a abrirse automáticamente o se dispare dos veces
-  fileInput.value = '';
-  }, 1000);
-});
-
-// Mostrar modal de selección
+// ===== MOSTRAR MODAL DE SELECCIÓN =====
 function mostrarModalSeleccion(depositos) {
   const modal = document.getElementById('modal');
   const content = document.getElementById('modalContent');
   depositosSeleccionados = [];
 
-  let html = `<h2>Selecciona depósitos a revisar</h2>`;
-  html += `<div class="deposit-list">`;
+  let html = `<h2>Selecciona depósitos a revisar</h2><div class="deposit-list">`;
   depositos.forEach(d => {
     html += `<button class="deposit-btn" onclick="toggleDeposito('${d}', this)">Depósito ${d}</button>`;
   });
-  html += `</div>`;
-
-  html += `<div style="margin-top:1rem; display:flex; gap:0.6rem;">
+  html += `</div>
+  <div style="margin-top:1rem; display:flex; gap:0.6rem;">
     <button class="btn btn-primary" style="flex:1" onclick="confirmarSeleccion()">Comenzar revisión</button>
     <button class="btn btn-secondary" style="flex:1" onclick="cerrarModal()">Cancelar</button>
   </div>`;
@@ -283,278 +223,231 @@ function mostrarModalSeleccion(depositos) {
   modal.setAttribute('aria-hidden','false');
 }
 
-// Permite hacer click en la etiqueta para abrir el selector
-// fileLabel.addEventListener('click', () => fileInput.click());
-
-    function toggleDeposito(valor, boton) {
-      const index = depositosSeleccionados.indexOf(valor);
-      if (index === -1) {
-        depositosSeleccionados.push(valor);
-        boton.classList.add('active');
-      } else {
-        depositosSeleccionados.splice(index, 1);
-        boton.classList.remove('active');
-      }
-    }
-function parsearRutas(texto) {
-  const bloques = texto.split(/\n{2,}/);
-  const rutas = [];
-
-  bloques.forEach(b => {
-    const cont = b.match(/Contenedor:\s*(\d+)/)?.[1] || '';
-    const arxiu = b.match(/Arxiu:\s*(.+)/)?.[1] || '';
-    const deposito = b.match(/Depósito:\s*(\d+)/)?.[1] || '';
-    const piso = b.match(/Pis:\s*(\d+)/)?.[1] || '';
-    const carrer = b.match(/Carrer:\s*(\d+)/)?.[1] || '';
-    const columna = b.match(/Columna:\s*(\d+)/)?.[1] || '';
-    const nivell = b.match(/Nivell:\s*(\d+)/)?.[1] || '';
-    const fecha = b.match(/\d{2}\/\d{2}\/\d{4}/)?.[0] || '';
-
-    if (cont && deposito) {
-      rutas.push({
-        contenedor: cont,
-        arxiu,
-        deposito,
-        piso,
-        carrer,
-        columna,
-        nivell,
-        fecha,
-        origen: 'DAT' // ✅ Aquí se marca el origen
-      });
-    }
-  });
-
-  return rutas;
+function toggleDeposito(valor, boton) {
+  const index = depositosSeleccionados.indexOf(valor);
+  if (index === -1) { depositosSeleccionados.push(valor); boton.classList.add('active'); }
+  else { depositosSeleccionados.splice(index,1); boton.classList.remove('active'); }
 }
-  function confirmarSeleccion() {
-  if (depositosSeleccionados.length === 0) {
-    alert('⚠️ Selecciona al menos un depósito para continuar.');
-    return;
-  }
 
-  // Agrupar y ordenar rutas por depósito seleccionado
-  const rutasAgrupadas = depositosSeleccionados.flatMap(deposito => {
-    const grupo = rutas
-      .filter(r => r.deposito === deposito)
-      .sort((a, b) => {
-        // Ordenar por columna, luego nivel, luego contenedor (de mayor a menor)
-        return (
-          (b.columna || 0) - (a.columna || 0) ||
-          (b.nivell || 0) - (a.nivell || 0) ||
-          (b.contenedor || 0) - (a.contenedor || 0)
-        );
-      });
+// ===== CONFIRMAR SELECCIÓN Y REVISIÓN =====
+function confirmarSeleccion() {
+  if (!depositosSeleccionados.length) { alert('⚠️ Selecciona al menos un depósito'); return; }
+  if (!rutas.length) { alert('⚠️ No hay rutas cargadas'); return; }
 
-    // 🔧 Parche de prueba: mostrar orden en consola
-    console.log(`📦 Depósito ${deposito} - ${grupo.length} rutas ordenadas:`);
-    grupo.forEach((r, i) => {
-      console.log(`${i + 1}. Contenedor ${r.contenedor} | Columna ${r.columna} | Nivel ${r.nivell}`);
-    });
-
-    return grupo;
-  });
+  const rutasAgrupadas = depositosSeleccionados.flatMap(dep => 
+    rutas.filter(r => r.deposito === dep)
+          .sort((a,b) => (parseInt(b.columna||0)-parseInt(a.columna||0)) || 
+                          (parseInt(b.nivell||0)-parseInt(a.nivell||0)) ||
+                          (parseInt(b.contenedor||0)-parseInt(a.contenedor||0)))
+  );
 
   rutasFiltradas = rutasAgrupadas;
+  if (!rutasFiltradas.length) { alert('⚠️ No hay rutas para los depósitos seleccionados'); return; }
 
-  if (rutasFiltradas.length === 0) {
-    alert('⚠️ No hay rutas para los depósitos seleccionados. Selecciona otros depósitos.');
+  actualIndex = 0;
+  mostrarSiguienteCaja();
+}
+
+function mostrarSiguienteCaja() {
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+
+  if (actualIndex >= rutasFiltradas.length) { 
+    document.getElementById('status').textContent = `✅ Revisión completa: ${rutasConfirmadas.length} cajas procesadas`;
+    mostrarModalFinal();
     return;
   }
 
-  actualIndex = 0;
+  const r = rutasFiltradas[actualIndex];
+  content.innerHTML = `
+    <h3>Contenedor: ${r.contenedor}</h3>
+    <p><strong>Arxiu:</strong> ${r.arxiu}</p>
+    <p><strong>Depósito:</strong> ${r.deposito} | <strong>Pis:</strong> ${r.piso}</p>
+    <p><strong>Carrer:</strong> ${r.carrer} | <strong>Columna:</strong> ${r.columna} | <strong>Nivell:</strong> ${r.nivell}</p>
+    <p><strong>Fecha:</strong> ${r.fecha}</p>
+    <div style="display:flex; gap:0.6rem; margin-top:1rem;">
+      <button class="btn btn-primary" style="flex:1" onclick="confirmarCaja(true)">✅ Caja encontrada</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="confirmarCaja(false)">❌ Caja no encontrada</button>
+    </div>
+  `;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden','false');
+}
+
+function confirmarCaja(encontrada) {
+  const r = rutasFiltradas[actualIndex];
+  r.estado = encontrada ? `✅ Enviada a Odena ${r.fecha}` : `❌ No localizada ${r.fecha}`;
+  rutasConfirmadas.push(r);
+
+  const div = document.createElement('div');
+  div.className = 'confirmada ' + (encontrada ? 'encontrada':'no-encontrada');
+  div.innerHTML = `<strong>Contenedor:</strong> ${r.contenedor}<br>
+    <strong>Arxiu:</strong> ${r.arxiu}<br>
+    <strong>Depósito:</strong> ${r.deposito} | <strong>Pis:</strong> ${r.piso}<br>
+    <strong>Carrer:</strong> ${r.carrer} | <strong>Columna:</strong> ${r.columna} | <strong>Nivell:</strong> ${r.nivell}<br>
+    <strong>Estado:</strong> ${r.estado}<br>
+    <strong>Origen:</strong> ${r.origen}`;
+  document.getElementById('confirmadas').appendChild(div);
+
+  actualIndex++;
+  mostrarSiguienteCaja(); // No cerramos modal, solo actualizamos contenido
+}
+
+// ===== MODAL FINAL =====
+function mostrarModalFinal() {
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+
+  content.innerHTML = `
+    <h2>✅ Revisión completada</h2>
+    <p>El archivo ha sido generado correctamente. Elige una opción:</p>
+    <div id="botonesDescarga"></div>
+  `;
+
+  descargarFinal(); // genera botones
+
+  const recargarBtn = document.createElement('button');
+  recargarBtn.textContent = '🔄 Cargar nuevo archivo';
+  recargarBtn.className = 'btn btn-secondary';
+  recargarBtn.style.width = '100%';
+  recargarBtn.style.marginTop = '0.8rem';
+  recargarBtn.onclick = abrirTrasRecarga;
+  content.appendChild(recargarBtn);
+
+  const salirBtn = document.createElement('button');
+  salirBtn.textContent = '🚪 Salir';
+  salirBtn.className = 'btn btn-secondary';
+  salirBtn.style.width = '100%';
+  salirBtn.style.marginTop = '0.5rem';
+  salirBtn.onclick = () => window.location.href = 'index.html';
+  content.appendChild(salirBtn);
+
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden','false');
+}
+
+// ===== DESCARGA FINAL =====
+function descargarFinal() {
+  if (!rutasConfirmadas.length) { alert("⚠️ No hay rutas confirmadas"); return; }
+
+  const contenido = rutasConfirmadas.map(r => (
+    `Contenedor: ${r.contenedor}
+Arxiu: ${r.arxiu}
+Depósito: ${r.deposito} | Pis: ${r.piso}
+Carrer: ${r.carrer} | Columna: ${r.columna} | Nivell: ${r.nivell}
+Cliente: ${r.client}
+Fecha: ${r.fecha}
+Código de Barras: ${r.codigoBarras || ''}
+Estado: ${r.estado}`
+  )).join('\n\n');
+
+  const fecha = new Date();
+  const yyyy = fecha.getFullYear();
+  const mm = String(fecha.getMonth()+1).padStart(2,'0');
+  const dd = String(fecha.getDate()).padStart(2,'0');
+  const nombreArchivo = `rutas_confirmadas_${yyyy}-${mm}-${dd}.dat`;
+
+  const blob = new Blob([contenido], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+
+  const div = document.getElementById('botonesDescarga');
+  div.innerHTML = '';
+
+  // Botón descargar
+  const btnDownload = document.createElement('button');
+  btnDownload.textContent = '📥 Descargar archivo .dat';
+  btnDownload.className = 'btn btn-primary';
+  btnDownload.style.width='100%';
+  btnDownload.style.marginTop='0.5rem';
+  btnDownload.onclick = () => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  div.appendChild(btnDownload);
+
+  // Gmail
+  const btnGmail = document.createElement('button');
+  btnGmail.textContent='📧 Enviar por Gmail';
+  btnGmail.className='btn btn-secondary';
+  btnGmail.style.width='100%';
+  btnGmail.style.marginTop='0.5rem';
+  btnGmail.onclick = ()=> window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=vegasf@outlook.com&su=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`,'_blank');
+  div.appendChild(btnGmail);
+
+  // Outlook/mailto
+  const btnOutlook = document.createElement('button');
+  btnOutlook.textContent='📨 Enviar por Outlook u otro';
+  btnOutlook.className='btn btn-secondary';
+  btnOutlook.style.width='100%';
+  btnOutlook.style.marginTop='0.5rem';
+  btnOutlook.onclick = ()=> window.location.href = `mailto:aradocartes@aradoc.cat?subject=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
+  div.appendChild(btnOutlook);
+}
+
+// ===== UTIL =====
+function cerrarModal() {
+  const modal = document.getElementById('modal');
+  modal.style.display='none';
+  modal.setAttribute('aria-hidden','true');
+}
+
+function abrirTrasRecarga() {
   cerrarModal();
-  document.getElementById('status').textContent = `✅ ${rutasFiltradas.length} cajas para revisar. Comenzando...`;
-  setTimeout(mostrarSiguienteCaja, 500);
+  localStorage.setItem('abrirInput','true');
+  location.reload();
 }
 
-    function mostrarSiguienteCaja() {
-      if (actualIndex >= rutasFiltradas.length) {
-        document.getElementById('status').textContent = `✅ Revisión completa: ${rutasConfirmadas.length} cajas procesadas`;
-        mostrarModalFinal();
-        return;
-      }
+window.addEventListener('load', ()=>{
+  if (localStorage.getItem('abrirInput')==='true'){
+    localStorage.removeItem('abrirInput');
+    document.getElementById('fileInput').click();
+  }
+});
 
-      const ruta = rutasFiltradas[actualIndex];
-      const modal = document.getElementById('modal');
-      const content = document.getElementById('modalContent');
+function iniciarRevision() {
+  if (!rutas.length) {
+    alert('📂 Primero selecciona un archivo .dat o .pdf');
+    return;
+  }
 
-      content.innerHTML = `
-        <h3>Contenedor: ${ruta.contenedor}</h3>
-        <p><strong>Arxiu:</strong> ${ruta.arxiu}</p>
-        <p><strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}</p>
-        <p><strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}</p>
-        <p><strong>Fecha:</strong> ${ruta.fecha}</p>
-        <div style="display:flex; gap:0.6rem; margin-top:1rem;">
-          <button class="btn btn-primary" style="flex:1" onclick="confirmarCaja(true)">✅ Caja encontrada</button>
-          <button class="btn btn-secondary" style="flex:1" onclick="confirmarCaja(false)">❌ Caja no encontrada</button>
-        </div>
-      `;
+  // Obtener todos los depósitos disponibles
+  const depositos = [...new Set(rutas.map(r => r.deposito).filter(Boolean))];
+  if (!depositos.length) {
+    alert('⚠️ No hay depósitos válidos en el archivo');
+    return;
+  }
 
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden','false');
-    }
-
-    function confirmarCaja(encontrada) {
-      const ruta = rutasFiltradas[actualIndex];
-      ruta.estado = encontrada ? `✅ Enviada a Odena ${ruta.fecha}` : `❌ No localizada ${ruta.fecha}`;
-      rutasConfirmadas.push(ruta);
-
-      // Mostrar debajo
-      const div = document.createElement('div');
-      div.className = 'confirmada ' + (encontrada ? 'encontrada' : 'no-encontrada');
-      div.innerHTML = `
-  <strong>Contenedor:</strong> ${ruta.contenedor}<br>
-  <strong>Arxiu:</strong> ${ruta.arxiu}<br>
-  <strong>Depósito:</strong> ${ruta.deposito} | <strong>Pis:</strong> ${ruta.piso}<br>
-  <strong>Carrer:</strong> ${ruta.carrer} | <strong>Columna:</strong> ${ruta.columna} | <strong>Nivell:</strong> ${ruta.nivell}<br>
-  <strong>Estado:</strong> ${ruta.estado}<br>
-  <strong>Origen:</strong> ${ruta.origen}
-`;
-      document.getElementById('confirmadas').appendChild(div);
-
-      actualIndex++;
-      cerrarModal();
-      setTimeout(mostrarSiguienteCaja, 300);
-    }
-function filtrarBloques(texto) {
-  const bloques = texto.split(/\n{2,}/); // separa por bloques
-  const filtrados = bloques.filter(b => !b.includes('❌ No localizada'));
-  return filtrados.join('\n\n');
+  mostrarModalSeleccion(depositos);
 }
+document.getElementById('fileInput').addEventListener('change', async (event) => {
+  const files = event.target.files;
+  if (!files.length) return;
 
-// Ejemplo de uso:
-const textoOriginal = `...`; // aquí va todo tu texto completo
-const resultadoFiltrado = filtrarBloques(textoOriginal);
-console.log(resultadoFiltrado);
-    // === Función que pediste que se volviera a añadir (descargarFinal) ===
-    function descargarFinal() {
-      if (rutasConfirmadas.length === 0) {
-        alert("No hay rutas confirmadas aún.");
-        return null;
-      }
+  rutas = []; // limpiar rutas anteriores
+  document.getElementById('status').textContent = '📂 Cargando archivos...';
 
-      const contenido = rutasConfirmadas.map(r => {
-        return `Contenedor: ${r.contenedor}\nArxiu: ${r.arxiu}\nDepósito: ${r.deposito} | Pis: ${r.piso}\nCarrer: ${r.carrer} | Columna: ${r.columna} | Nivell: ${r.nivell}\n${r.estado}`;
-      }).join('\n\n');
+  for (const file of files) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    let texto = '';
 
-      const fecha = new Date();
-      const yyyy = fecha.getFullYear();
-      const mm = String(fecha.getMonth() + 1).padStart(2, '0');
-      const dd = String(fecha.getDate()).padStart(2, '0');
-      const nombreArchivo = `rutas_confirmadas_${yyyy}-${mm}-${dd}.dat`;
-
-      const blob = new Blob([contenido], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-
-      // Botón de descarga
-      const descargarBtn = document.createElement('button');
-      descargarBtn.textContent = '📥 Descargar archivo .dat';
-      descargarBtn.className = 'btn btn-primary';
-      descargarBtn.style.width = '100%';
-      descargarBtn.style.marginTop = '0.8rem';
-      descargarBtn.onclick = () => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = nombreArchivo;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        // opcional: liberar el objeto URL después de un tiempo
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      };
-
-      // Botón Gmail (abre compose; no adjunta automáticamente)
-      const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=vegasf@outlook.com&su=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
-      const gmailBtn = document.createElement('button');
-      gmailBtn.textContent = '📧 Enviar por Gmail';
-      gmailBtn.className = 'btn btn-secondary';
-      gmailBtn.style.width = '100%';
-      gmailBtn.style.marginTop = '0.5rem';
-      gmailBtn.onclick = () => window.open(gmailLink, '_blank');
-
-      // Botón Outlook / genérico (mailto)
-      const mailtoLink = `mailto:aradocartes@aradoc.cat?subject=Rutas confirmadas&body=Adjunto archivo generado: ${nombreArchivo}`;
-      const outlookBtn = document.createElement('button');
-      outlookBtn.textContent = '📨 Enviar por Outlook u otro';
-      outlookBtn.className = 'btn btn-secondary';
-      outlookBtn.style.width = '100%';
-      outlookBtn.style.marginTop = '0.5rem';
-      outlookBtn.onclick = () => window.location.href = mailtoLink;
-
-      return [descargarBtn, gmailBtn, outlookBtn];
+    if (ext === 'dat') {
+      texto = await file.text();
+      rutas.push(...parsearRutas(texto, 'DAT'));
+    } else if (ext === 'pdf') {
+      texto = await leerPDF(file);
+      rutas.push(...parsearRutas(texto, 'PDF'));
     }
+  }
 
-    function mostrarModalFinal() {
-      const modal = document.getElementById('modal');
-      const content = document.getElementById('modalContent');
-      content.innerHTML = `<h2>✅ Revisión completada</h2><p>El archivo ha sido generado correctamente (si ya hay confirmaciones). Elige una opción:</p>`;
+  document.getElementById('status').textContent = `✅ ${rutas.length} rutas cargadas.`;
+});
 
-      const botones = descargarFinal();
-      if (botones) {
-        botones.forEach(btn => content.appendChild(btn));
-      }
+</script>
 
-      const recargarBtn = document.createElement('button');
-      recargarBtn.textContent = '🔄 Cargar nuevo archivo';
-      recargarBtn.className = 'btn btn-secondary';
-      recargarBtn.style.width = '100%';
-      recargarBtn.style.marginTop = '0.8rem';
-      recargarBtn.onclick = abrirTrasRecarga;
-      content.appendChild(recargarBtn);
-
-      const salirBtn = document.createElement('button');
-      salirBtn.textContent = '🚪 Salir';
-      salirBtn.className = 'btn btn-secondary';
-      salirBtn.style.width = '100%';
-      salirBtn.style.marginTop = '0.5rem';
-      salirBtn.onclick = () => window.location.href = 'index.html';
-      content.appendChild(salirBtn);
-
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden','false');
-    }
-
-    function abrirTrasRecarga() {
-      localStorage.setItem('abrirInput', 'true');
-      document.getElementById('modal').style.display = 'none'; // Oculta el modal antes de recargar
-      location.reload();
-    }
-
-    function reiniciar() {
-      rutas = [];
-      rutasFiltradas = [];
-      rutasConfirmadas = [];
-      depositosSeleccionados = [];
-      actualIndex = 0;
-
-      document.getElementById('fileInput').value = '';
-      document.getElementById('status').textContent = '📂 Esperando nuevo archivo .dat...';
-      document.getElementById('modal').style.display = 'none';
-      document.getElementById('confirmadas').innerHTML = '';
-    }
-
-    function cerrarModal(){
-      const modal = document.getElementById('modal');
-      modal.style.display = 'none';
-      modal.setAttribute('aria-hidden','true');
-       document.body.focus();
-    }
-
-    // Mantener comportamiento de 'abrir input tras recarga' si se usó antes
-    window.addEventListener('load', () => {
-      if (localStorage.getItem('abrirInput') === 'true') {
-        localStorage.removeItem('abrirInput');
-        document.getElementById('modal').style.display = 'none';
-        document.getElementById('modalContent').innerHTML = '';
-        document.getElementById('confirmadas').innerHTML = '';
-        document.getElementById('status').textContent = '📂 Esperando nuevo archivo .dat...';
-        setTimeout(() => document.getElementById('fileInput').click(), 300);
-      }
-
-      // Permitir cerrar modal al hacer click fuera del contenido
-      
-    });
-  </script>
 </body>
 </html>

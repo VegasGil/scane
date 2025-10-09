@@ -1,0 +1,209 @@
+/* RESET Y BODY */
+ :root {
+      --rojo: #d32f2f;
+      --gris: #6e6c6c;
+      --gris-claro: #f4f6f8;
+      --blanco: #fff;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, var(--gris-claro), #f7f7f7);
+      color: var(--gris);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      background: var(--rojo);
+      padding: 0.8em 1.2em;
+      color: var(--blanco);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    header .brand a {
+      text-decoration: none;
+      color: var(--blanco);
+      font-size: 1.2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--rojo);
+      margin: 1em 0;
+      font-size: 1.5rem;
+    }
+
+h1, h2 { font-size: 16px; margin-bottom: 8px; color: #111; }
+
+label {
+  font-size: 12px;
+  display: block;
+  margin: 4px 0;
+  color: #111;
+}
+
+/* Inputs y botones centrados */
+.input-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* centra horizontalmente */
+  gap: 15px;
+  margin-bottom: 10px;
+}
+.input-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+}
+input[type=file], input[type=text], select {
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid #999;
+  border-radius: 4px;
+  background: #fff;
+  color: #111;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+button {
+  background: #b91c1c;
+  color: #fff;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 8px 12px;
+  margin-top: 5px;
+  width: 150px; /* tamaño fijo y uniforme */
+  text-align: center; /* fuerza alineación */
+  transition: background 0.2s;
+}
+
+
+button:hover {
+  background: #f87171; /* rojo más brillante al pasar el mouse */
+}
+.input-group button + button {
+  margin-left: 10px; /* separación entre botones dentro del mismo grupo */
+}
+
+.input-group {
+  align-items: center;
+}
+/* TABLA */
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 600px;
+}
+
+th, td {
+  border: 1px solid #999;
+  padding: 4px 6px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  background: #333; /* gris oscuro */
+  color: #fff;
+  position: sticky;
+  top: 0;
+}
+
+tr:nth-child(even) { background: #eee; } /* gris claro */
+tr:nth-child(odd) { background: #fff; }
+
+/* ESTADOS */
+.estado-localizada { background: #d1fae5; color: #065f46; font-weight: bold; cursor: pointer; }
+.estado-no-localizada { background: #fee2e2; color: #b91c1c; font-weight: bold; cursor: pointer; }
+.estado-sin-ubicacion { background: #f3f3f3; color: #78350f; font-weight: bold; cursor: pointer; }
+
+/* MODAL */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 200;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  overflow: auto;
+  background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: #fff; /* blanco */
+  margin: 30px auto;
+  padding: 15px;
+  border-radius: 8px;
+  width: 95%;
+  max-width: 800px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  color: #111;
+}
+
+.closeBtn {
+  float: right;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.closeBtn:hover { color: #b91c1c; }
+.table-container {
+  overflow-x: auto;   /* scroll horizontal para tablas */
+  width: 100%;
+}
+/* RESPONSIVE MOBILE-FIRST */
+/* Responsive */
+@media (max-width: 480px) {
+  .input-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+@media (max-width: 768px) {
+  body { font-size: 11px; padding: 8px; }
+  h1, h2 { font-size: 14px; }
+  label { font-size: 11px; }
+  input[type=file], input[type=text], select, button { font-size: 11px; padding: 4px; }
+  th, td { font-size: 11px; padding: 3px 5px; }
+  .modal-content { padding: 10px; }
+}
+
+@media (min-width: 480px) {
+  body { font-size: 12px; }
+  h1, h2 { font-size: 16px; }
+  input[type=file], input[type=text], select, button { font-size: 12px; padding: 5px 6px; }
+  th, td { font-size: 12px; padding: 4px 6px; }
+}
+
+@media (min-width: 768px) {
+  body { font-size: 13px; }
+  h1, h2 { font-size: 18px; }
+  input[type=file], input[type=text], select, button { font-size: 13px; padding: 6px 8px; }
+  th, td { font-size: 13px; padding: 5px 8px; }
+}
+
+@media (min-width: 1024px) {
+  body { font-size: 14px; }
+  h1, h2 { font-size: 20px; }
+  input[type=file], input[type=text], select, button { font-size: 14px; padding: 8px 10px; }
+  th, td { font-size: 14px; padding: 6px 10px; }
+}

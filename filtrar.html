@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8">
   <title>📦 Comparador de Rutas DAT</title>
@@ -70,7 +69,8 @@
       display: none;
     }
 
-    .btn-file, .paso {
+    .btn-file,
+    .action-btn {
       background: var(--gris);
       color: var(--blanco);
       padding: 0.7em 1em;
@@ -82,6 +82,7 @@
       max-width: 220px;
       transition: 0.3s;
       text-align: center;
+      border: none;
     }
 
     .btn-file:hover {
@@ -89,17 +90,7 @@
     }
 
     .action-btn {
-      font-size: 1em;
-      padding: 0.7em 1em;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      flex: 1 1 45%;
-      max-width: 220px;
       background: var(--rojo);
-      color: var(--blanco);
-      font-weight: bold;
     }
 
     .action-btn:hover {
@@ -131,82 +122,41 @@
       font-size: 1em;
     }
 
+    .btn-download {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .btn-download:hover {
+      background-color: #45a049;
+    }
+
     .btn-outlook {
-      background: #0078d4;
-      color: var(--blanco);
+      background-color: #0078D4;
+      color: white;
     }
 
     .btn-outlook:hover {
-      background: #005fa3;
+      background-color: #005a9e;
     }
 
-    @media (max-width: 600px) {
-      #controls {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .btn-file,
-      .action-btn {
-        flex: 1 1 100%;
-        max-width: none;
-        width: 70%;
-      }
-
-      h1 {
-        font-size: 1.2rem;
-      }
-
-      header .brand a {
-        font-size: 1rem;
-      }
+    .btn-copy {
+      background-color: #f0ad4e;
+      color: white;
     }
-  
-  .modal-btn {
-    margin: 10px 8px;
-    padding: 10px 14px;
-    font-size: 14px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
 
-  .btn-download {
-    background-color: #4CAF50;
-    color: white;
-  }
+    .btn-copy:hover {
+      background-color: #ec971f;
+    }
 
-  .btn-download:hover {
-    background-color: #45a049;
-  }
-
-  .btn-outlook {
-    background-color: #0078D4;
-    color: white;
-  }
-
-  .btn-outlook:hover {
-    background-color: #005a9e;
-  }
-
-  .btn-copy {
-    background-color: #f0ad4e;
-    color: white;
-  }
-
-  .btn-copy:hover {
-    background-color: #ec971f;
-  }
-
-  pre {
-    background-color: #f9f9f9;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
+    pre {
+      background-color: #f9f9f9;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
   </style>
 </head>
 
@@ -224,15 +174,13 @@
     <label class="btn-file" for="fileHistorico">📁 Confirmada .dat</label>
     <input type="file" id="fileHistorico" accept=".dat" />
 
-    <label class="btn-file" for="fileActual">📁 Pdf_de_rutas .dat</label>
+    <label class="btn-file" for="fileActual">📁 Y Ruta Confirmada .dat</label>
     <input type="file" id="fileActual" accept=".dat" />
 
     <button class="action-btn" onclick="comparar()">🔍 Comparar y filtrar</button>
-    <a class="paso" href="consulta.html">Paso 3</a>   
   </div>
 
   <div id="resultado"></div>
-
 
   <script>
 let historico = [];
@@ -270,29 +218,21 @@ function comparar() {
     return;
   }
 
-  // Contenedores del histórico
   const contHistorico = new Set(historico.map(b => extraerContenedor(b)));
-
-  // Pendientes reales: no están en histórico
   const pendientes = actual.filter(b => !contHistorico.has(extraerContenedor(b)));
-
-  // Ya procesados: están en histórico
   const yaProcesados = actual.filter(b => contHistorico.has(extraerContenedor(b)));
-
-  // No localizadas: solo los ❌ del histórico
   const noLocalizadas = historico.filter(b => b.includes('❌ No localizada'));
 
   const resultadoDiv = document.getElementById('resultado');
   resultadoDiv.innerHTML = '';
 
-  // 1️⃣ Resumen
   const resumen = document.createElement('div');
   resumen.textContent = `✅ Pendientes reales: ${pendientes.length} | 🟡 Ya procesadas: ${yaProcesados.length} | ❌ No localizadas: ${noLocalizadas.length}`;
   resumen.style.fontWeight = 'bold';
   resumen.style.marginBottom = '1em';
   resultadoDiv.appendChild(resumen);
 
-  // 2️⃣ Mostrar pendientes y descargar
+  // 🔹 Mostrar pendientes
   if (pendientes.length) {
     const pre = document.createElement('pre');
     pre.textContent = pendientes.join('\n\n');
@@ -300,6 +240,7 @@ function comparar() {
 
     const blob = new Blob([pendientes.join('\n\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
+
     const enlace = document.createElement('a');
     enlace.href = url;
     enlace.download = 'ruta_pendientes.dat';
@@ -308,17 +249,39 @@ function comparar() {
     resultadoDiv.appendChild(enlace);
   }
 
-  // 3️⃣ Correo con ❌ no localizadas
+  // 🔹 Generar correo con no localizadas
   if (noLocalizadas.length) {
     const textoCorreo = noLocalizadas.map(b => {
       const cont = extraerContenedor(b);
       const arxiu = (b.match(/Arxiu:\s*(.+)/) || [])[1] || '';
-      const fecha = (b.match(/\d{2}\/\d{2}\/\d{4}/) || [0])[0] || '';
-      return `Contenedor: ${cont}\nArxiu: ${arxiu}\nFecha: ${fecha}\n`;
+      const deposito = (b.match(/Dep[oó]sito:\s*(.+)/i) || [])[1] || '';
+      const piso = (b.match(/Pis[o]?:\s*(.+)/i) || [])[1] || '';
+      const carrer = (b.match(/Carrer|Calle:\s*(.+)/i) || [])[1] || '';
+      const columna = (b.match(/Columna:\s*(.+)/i) || [])[1] || '';
+      const nivell = (b.match(/Nivell|Nivel:\s*(.+)/i) || [])[1] || '';
+      const cliente = (b.match(/Client[e]?:\s*(.+)/i) || [])[1] || '';
+      const codigo = (b.match(/C[oó]digo.*:\s*(.+)/i) || [])[1] || '';
+      const fecha = (b.match(/\d{2}\/\d{2}\/\d{4}/) || [])[0] || '';
+
+      return `Contenedor: ${cont}
+Arxiu: ${arxiu}
+Depósito: ${deposito}
+Piso: ${piso}
+Carrer: ${carrer}
+Columna: ${columna}
+Nivell: ${nivell}
+Cliente: ${cliente}
+Código de Barras: ${codigo}
+Fecha: ${fecha}`;
     }).join('\n----------------\n');
 
-    const mailtoLink = `mailto:fernando@aradoc.cat?subject=Rutas filtradas&body=${encodeURIComponent(textoCorreo)}`;
+    const hoy = new Date();
+    const fechaDevolucion = hoy.toLocaleDateString('es-ES');
+    const textoFinal = `${textoCorreo}\n\n📅 Fecha de Devolución: ${fechaDevolucion}`;
 
+    const asunto = encodeURIComponent('Listado de cajas no localizadas');
+    const cuerpo = encodeURIComponent(textoFinal);
+    const mailtoLink = `mailto:mireia@aradoc.cat?cc=fernando@aradoc.cat&subject=${asunto}&body=${cuerpo}`;
 
     const btnMail = document.createElement('button');
     btnMail.textContent = '📨 Enviar correo con no localizadas';
@@ -326,97 +289,15 @@ function comparar() {
     btnMail.onclick = () => window.location.href = mailtoLink;
     resultadoDiv.appendChild(btnMail);
 
-    // Botón copiar al portapapeles
     const copiarBtn = document.createElement('button');
     copiarBtn.textContent = '📋 Copiar texto para correo';
     copiarBtn.className = 'modal-btn btn-copy';
-    copiarBtn.onclick = () => navigator.clipboard.writeText(textoCorreo);
+    copiarBtn.onclick = () => navigator.clipboard.writeText(textoFinal)
+      .then(() => alert('✅ Texto copiado al portapapeles.'))
+      .catch(() => alert('⚠️ No se pudo copiar el texto.'));
     resultadoDiv.appendChild(copiarBtn);
   }
 }
-
-
-
-  // Mostrar resumen
-  const resumen = document.createElement('div');
-  resumen.textContent = `✅ Ruta nueva con ${nuevos.length} contenedores. 📩 ${yaBuscados.length} ya fueron buscados y no localizados.`;
-  resumen.style.fontWeight = 'bold';
-  resumen.style.marginBottom = '1em';
-  resultadoDiv.appendChild(resumen);
-
-  // Mostrar ruta nueva
-  const contenidoFinal = nuevos.join('\n\n');
-  const pre = document.createElement('pre');
-  pre.textContent = contenidoFinal;
-  resultadoDiv.appendChild(pre);
-
-  // Descargar ruta nueva
- // Descargar ruta nueva
-const blob = new Blob([contenidoFinal], { type: 'text/plain' });
-const url = URL.createObjectURL(blob);
-const enlace = document.createElement('a');
-enlace.href = url;
-enlace.download = 'ruta_nueva.dat';
-enlace.textContent = '⬇️ Descargar ruta nueva';
-enlace.className = 'modal-btn btn-download';
-resultadoDiv.appendChild(enlace);
-
-// Crear botón para enviar por correo
-const nombreArchivo = 'ruta_nueva.dat';
-mailtoLink = `mailto:rippermanresa@gmail.com,vegasfalexis@gmail.com?subject=Rutas filtradas&body=${encodeURIComponent(
-  `Adjunto archivo generado: ${nombreArchivo}\n\nPor favor, revisa las rutas pendientes.`
-)}`;
-
-const btnMail = document.createElement('button');
-btnMail.textContent = '📨 Enviar por correo';
-btnMail.className = 'modal-btn btn-outlook';
-btnMail.onclick = () => window.location.href = mailtoLink;
-resultadoDiv.appendChild(btnMail);
-
-
-  // Construir bloques de texto para correo
-  const bloquesCorreo = yaBuscados.map(b => {
-    const contenedor = extraerContenedor(b);
-    const arxiu = (b.match(/Arxiu:\s*(.+)/) || [])[1]?.trim() || 'Sin dato';
-    const fecha = (b.match(/\d{2}\/\d{2}\/\d{4}/) || [])[0] || 'Sin fecha';
-    return [
-      `Contenedor: ${contenedor} |`,
-      `Arxiu: ${arxiu} |`,
-      `Ya buscado el ${fecha}`,
-      `Devolucion:`,
-      `____________________________________`
-    ].join('\n');
-  });
-
-  const textoCorreo = [
-    'Buen día, consultas buscadas:',
-    '',
-    ...bloquesCorreo,
-    '',
-    'Saludos.'
-  ].join('\n');
-
-  // Botón para enviar por Outlook
-const mailtoLink = `mailto:fernando@aradoc.cat?subject=Rutas filtradas&body=${encodeURIComponent(textoCorreo)}`;
-
-const outlookBtn = document.createElement('button');
-outlookBtn.textContent = '📨 Informar contenedores ya buscados';
-outlookBtn.className = 'modal-btn btn-outlook';
-outlookBtn.onclick = () => window.location.href = mailtoLink;
-resultadoDiv.appendChild(outlookBtn);
-
-// Botón para copiar al portapapeles
-const copiarBtn = document.createElement('button');
-copiarBtn.textContent = '📋 Copiar texto para correo';
-copiarBtn.className = 'modal-btn btn-copy';
-copiarBtn.onclick = () => {
-  navigator.clipboard.writeText(textoCorreo)
-    .then(() => alert('✅ Texto copiado al portapapeles. Puedes pegarlo en tu correo.'))
-    .catch(() => alert('⚠️ No se pudo copiar el texto. Intenta manualmente.'));
-};
-resultadoDiv.appendChild(copiarBtn);
- 
-</script>
+  </script>
 </body>
-
 </html>

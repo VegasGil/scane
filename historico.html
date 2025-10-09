@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="historico.css">
+<title>Visor de archivo .dat (Mejorado)</title>
+
+</head>
+<body>
+ <header>
+    <div class="brand">
+      <a href="index.html">ARADOC ARTES</a>
+    </div>
+  </header>
+
+  <h1>📦 Visor de Rutas Artes</h1>
+
+<div class="input-container">
+  <div class="input-group">
+    <label for="fileInput">Cargar archivo 1:</label>
+    <input type="file" id="fileInput" accept=".dat,.txt">
+  </div>
+
+  <div class="input-group">
+    <label for="fileInput2">Cargar archivo 2 (opcional):</label>
+    <input type="file" id="fileInput2" accept=".dat,.txt">
+  </div>
+
+  <div class="input-group">
+    <label for="depositoFiltro">Filtro Depósito:</label>
+    <input type="text" id="depositoFiltro" placeholder="Filtrar por depósito">
+  </div>
+
+  <div class="input-group">
+    <button id="saveBtn">💾 Guardar</button>
+    <button id="openPickerBtn">🗂 Ruta</button>
+  </div>
+</div>
+
+<p id="totales"></p>
+
+<!-- MODAL -->
+<!-- MODAL -->
+<div id="pickerModal" class="modal">
+  <div class="modal-content">
+    <span class="closeBtn">&times;</span>
+    <h2>Selector de Ubicación por Contenedor</h2>
+
+    <label for="modalContenedorFiltro">Filtrar por Contenedor:</label>
+    <input type="text" id="modalContenedorFiltro" placeholder="Contenedor o Depósito...">
+
+    <label>Ordenar Carrer:</label>
+    <select id="carrerOrder">
+      <option value="desc">Mayor → Menor</option>
+      <option value="asc">Menor → Mayor</option>
+    </select>
+
+    <p id="modalTotales"></p>
+
+    <div class="table-container">
+      <table id="modalTable">
+        <thead>
+          <tr>
+            <th>Depósito</th>
+            <th>Carrer</th>
+            <th>Columna</th>
+            <th>Nivell</th>
+            <th>Arxiu</th>
+            <th>Contenedor</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="input-group">
+  <label for="contenedorFiltro">Filtro Contenedor:</label>
+  <input type="text" id="contenedorFiltro" placeholder="Filtrar por contenedor">
+</div>
+
+<!-- Tabla principal -->
+<div class="table-container">
+  <table id="dataTable">
+    <thead id="tableHead"></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+
+
+<table id="dataTable">
+  <thead id="tableHead"></thead>
+  <tbody></tbody>
+</table>
+
+<script src="historico.js"></script>
+</body>
+</html>
