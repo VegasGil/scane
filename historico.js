@@ -325,6 +325,9 @@ const tbody = document.querySelector('#dataTable tbody');
 const thead = document.querySelector('#tableHead');
 const depositoFiltro = document.getElementById('depositoFiltro');
 const contenedorFiltro = document.getElementById('contenedorFiltro'); // 🔹 Nuevo filtro
+const fechaFiltro = document.getElementById('fechaFiltro');
+const estadoCheckboxes = document.querySelectorAll('.estadoCheckbox');
+
 const saveBtn = document.getElementById('saveBtn');
 const totalesP = document.getElementById('totales');
 
@@ -378,20 +381,33 @@ function renderTable() {
 
   const trHead = document.createElement('tr');
   headersSet.forEach(h=>{
-    const th = document.createElement('th'); th.textContent = h; trHead.appendChild(th);
+    const th = document.createElement('th'); 
+    th.textContent = h; 
+    trHead.appendChild(th);
   });
   thead.appendChild(trHead);
 
   let counts = {"✅ Localizada":0,"❌ No localizada":0,"❌ Sin ubicación":0};
 
-  rows.filter(r=>{
+  rows.filter(r => {
     const filtroDeposito = depositoFiltro.value.trim().toLowerCase();
     const filtroContenedor = contenedorFiltro.value.trim().toLowerCase();
-    const d = (r["Depósito"]||"").toLowerCase();
-    const c = (r["Contenedor"]||"").toLowerCase();
+    const filtroFecha = fechaFiltro.value ? fechaFiltro.value.split('-').reverse().join('/') : ""; // formato dd/mm/yyyy
+    const estadosSeleccionados = Array.from(estadoCheckboxes)
+                                     .filter(cb => cb.checked)
+                                     .map(cb => cb.value);
+
+    const d = (r["Depósito"] || "").toLowerCase();
+    const c = (r["Contenedor"] || "").toLowerCase();
+    const f = (r["Fecha registro"] || "").trim();
+    const e = r["Estado"] || "";
+
+    // Filtros combinados
     return (!filtroDeposito || d.includes(filtroDeposito)) &&
-           (!filtroContenedor || c.includes(filtroContenedor));
-  }).forEach(row=>{
+           (!filtroContenedor || c.includes(filtroContenedor)) &&
+           (!filtroFecha || f === filtroFecha) &&
+           (estadosSeleccionados.includes(e));
+  }).forEach(row => {
     const tr = document.createElement('tr');
     headersSet.forEach(h=>{
       const td = document.createElement('td');
@@ -419,6 +435,7 @@ function renderTable() {
   totalesP.textContent = `Totales → Localizada: ${counts["✅ Localizada"]}, No localizada: ${counts["❌ No localizada"]}, Sin ubicación: ${counts["❌ Sin ubicación"]}`;
 }
 
+
 // === CARGA DE ARCHIVOS ===
 input1.addEventListener('change', async e=>{
   const text = await e.target.files[0].text();
@@ -436,6 +453,9 @@ input2.addEventListener('change', async e=>{
 
 depositoFiltro.addEventListener('input', renderTable);
 contenedorFiltro.addEventListener('input', renderTable);
+fechaFiltro.addEventListener('change', renderTable);
+estadoCheckboxes.forEach(cb => cb.addEventListener('change', renderTable));
+
 
 // === GUARDAR ARCHIVO ===
 saveBtn.addEventListener('click', ()=>{
